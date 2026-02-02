@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wedding Moments - 婚禮相片分享</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Noto Serif TC', serif;
+            background-color: #fdfaf6;
+        }
+
+        .fade-in {
+            animation: fadeIn 1s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+
+        /* 輪播動畫 */
+        .slide-up {
+            animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center overflow-x-hidden">
+
+    <!-- 載入中遮罩 -->
+    <div id="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+    </div>
+
+    <!-- 賓客上傳模式 (Guest Mode) -->
+    <div id="guest-view" class="hidden w-full max-w-md px-6 text-center">
+        <header class="mb-12">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Wedding Moments</h1>
+            <p class="text-gray-500 italic">分享您眼中的幸福瞬間</p>
+        </header>
+
+        <div class="relative group">
+            <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden">
+            <button onclick="document.getElementById('photo-input').click()" 
+                class="w-64 h-64 rounded-full gradient-bg shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 hover:scale-105 mx-auto border-8 border-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                <span class="text-white text-xl font-bold tracking-widest">拍照 / 上傳</span>
+            </button>
+        </div>
+
+        <div id="status-msg" class="mt-8 text-sm font-medium text-gray-600 h-6"></div>
+        
+        <footer class="mt-20 text-xs text-gray-400">
+            Powered by Digital Wedding Assistant
+        </footer>
+    </div>
+
+    <!-- 大螢幕播放模式 (Dashboard Mode) -->
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-black flex items-center justify-center">
+        <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center">
+            <div id="empty-state" class="text-white text-2xl animate-pulse">
+                等待照片上傳中...
+            </div>
+            <!-- 照片將動態插入此處 -->
+        </div>
+        
+        <!-- 左下角提示區 -->
+        <div class="absolute bottom-8 left-8 bg-white p-4 rounded-xl shadow-lg flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
+            <div class="text-left">
+                <p class="text-black font-bold text-lg">掃碼分享照片</p>
+                <p class="text-gray-500 text-sm">您的祝福將即時顯示在螢幕上</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- 使用您提供的 Firebase 配置 ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBepjw82kk-gC0XzzzswLNDDJTGSjrPK54",
+            authDomain: "wedding-moments-9ac34.firebaseapp.com",
+            projectId: "wedding-moments-9ac34",
+            storageBucket: "wedding-moments-9ac34.firebasestorage.app",
+            messagingSenderId: "236760154456",
+            appId: "1:236760154456:web:d0428c45c512d0f305a52d",
+            measurementId: "G-2TXYY38NH9"
+        };
+
+        // 引入 Firebase SDK
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // 初始化
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // 此 ID 必須與您在 Firebase Console 設定的 Rules 路徑一致
+        const weddingId = 'wedding-app'; 
+
+        let currentUser = null;
+
+        // 判斷模式 (?mode=dashboard)
+        const urlParams = new URLSearchParams(window.location.search);
+        const isDashboard = urlParams.get('mode') === 'dashboard';
+
+        // 匿名登入
+        signInAnonymously(auth).catch((error) => {
+            console.error("登入失敗:", error);
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loading').classList.add('hidden');
+                if (isDashboard) {
+                    showDashboard();
+                } else {
+                    showGuest();
+                }
+            }
+        });
+
+        // 賓客模式：上傳照片
+        function showGuest() {
+            document.getElementById('guest-view').classList.remove('hidden');
+            const input = document.getElementById('photo-input');
+            const status = document.getElementById('status-msg');
+
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file || !currentUser) return;
+
+                status.innerText = "正在傳送您的祝福...";
+                
+                try {
+                    const base64 = await resizeAndConvert(file);
+                    
+                    // 存入指定的路徑
+                    await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
+                        imageUrl: base64,
+                        timestamp: Date.now(),
+                        userId: currentUser.uid
+                    });
+
+                    status.innerText = "上傳成功！感謝您的分享 ❤️";
+                    input.value = "";
+                    setTimeout(() => status.innerText = "", 3000);
+                } catch (err) {
+                    status.innerText = "上傳失敗，請再試一次";
+                    console.error(err);
+                }
+            };
+        }
+
+        // 大螢幕模式：即時監聽
+        function showDashboard() {
+            document.getElementById('dashboard-view').classList.remove('hidden');
+            const container = document.getElementById('slideshow-container');
+            const emptyState = document.getElementById('empty-state');
+            
+            let photoQueue = [];
+            let isPlaying = false;
+
+            // 監聽新照片
+            const q = collection(db, 'artifacts', weddingId, 'public', 'data', 'photos');
+            onSnapshot(q, (snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === "added") {
+                        const data = change.doc.data();
+                        photoQueue.push(data.imageUrl);
+                        if (!isPlaying) startSlideshow();
+                    }
+                });
+            });
+
+            async function startSlideshow() {
+                if (photoQueue.length === 0) return;
+                isPlaying = true;
+                emptyState.classList.add('hidden');
+
+                while (photoQueue.length > 0) {
+                    const nextImg = photoQueue.shift();
+                    await displayImage(nextImg);
+                }
+                
+                isPlaying = false;
+            }
+
+            function displayImage(url) {
+                return new Promise((resolve) => {
+                    const imgFrame = document.createElement('div');
+                    imgFrame.className = "absolute inset-0 flex items-center justify-center p-12 slide-up";
+                    imgFrame.innerHTML = `
+                        <div class="relative bg-white p-4 shadow-2xl rounded-sm transform rotate-1">
+                            <img src="${url}" class="max-w-full max-h-[80vh] object-contain shadow-inner">
+                            <div class="mt-6 text-center text-gray-400 italic font-serif text-xl">
+                                Wedding Memories - New Moment
+                            </div>
+                        </div>
+                    `;
+                    
+                    if (container.children.length > 1) {
+                        const old = container.children[0];
+                        if (old !== emptyState) {
+                            old.style.transition = "opacity 1s ease";
+                            old.style.opacity = "0";
+                            setTimeout(() => old.remove(), 1000);
+                        }
+                    }
+
+                    container.appendChild(imgFrame);
+                    setTimeout(resolve, 6000); // 顯示 6 秒
+                });
+            }
+        }
+
+        // 圖片壓縮工具
+        function resizeAndConvert(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.src = event.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const MAX_WIDTH = 800;
+                        if (width > MAX_WIDTH) {
+                            height *= MAX_WIDTH / width;
+                            width = MAX_WIDTH;
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                    };
+                };
+            });
+        }
+    </script>
+</body>
+</html>
