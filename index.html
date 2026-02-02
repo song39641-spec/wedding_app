@@ -163,13 +163,16 @@
     <div id="admin-view" class="hidden w-full max-w-4xl px-6 py-10">
         <div class="bg-white p-6 rounded-2xl shadow-lg mb-8 border-2 border-pink-100">
             <h2 class="text-xl font-bold text-gray-800 mb-4 font-serif">1. 設定新人基底照 (AI 參考用)</h2>
-            <div class="flex items-center gap-4">
-                <div id="couple-base-preview" class="w-32 h-32 bg-gray-100 rounded-lg overflow-hidden border flex items-center justify-center">
-                    <span class="text-gray-400 text-xs">尚未設定</span>
+            <div class="flex flex-col md:flex-row items-center gap-6">
+                <div id="couple-base-preview" class="w-48 h-48 bg-gray-50 rounded-xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center">
+                    <span class="text-gray-400 text-sm">尚未設定</span>
                 </div>
-                <div>
-                    <input type="file" id="couple-base-input" accept="image/*" class="mb-2 block text-sm">
-                    <p class="text-xs text-gray-400">請上傳一張您與老婆的合照作為 AI 融合背景</p>
+                <div class="flex-1 space-y-4 text-center md:text-left">
+                    <input type="file" id="couple-base-input" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
+                    <p class="text-xs text-gray-400">請挑選一張橫式且光線充足的婚紗照，AI 融合效果會更好。</p>
+                    <button id="confirm-base-btn" class="hidden px-8 py-3 bg-pink-500 text-white rounded-full font-bold shadow-lg hover:bg-pink-600 transition-colors">
+                        確認上傳基底照
+                    </button>
                 </div>
             </div>
         </div>
@@ -228,14 +231,12 @@
 
         // --- AI 融合核心邏輯 ---
         async function runAIMagic(guestBase64) {
-            // 1. 取得新人基底照
             const baseSnap = await getDoc(doc(db, 'artifacts', weddingId, 'settings', 'couplePhoto'));
             if (!baseSnap.exists()) {
-                throw new Error("新郎新娘還沒上傳基底照喔！");
+                throw new Error("管理員還沒上傳新人的基底照喔！");
             }
             const coupleBase64 = baseSnap.data().imageUrl;
 
-            // 2. 呼叫 Gemini AI (Image-to-Image)
             const prompt = "This is a wedding photo of a couple (Image 1) and a selfie of a guest (Image 2). Please generate a NEW photo that seamlessly blends the guest from Image 2 into the wedding scene of Image 1. The guest should appear as if they are standing next to the couple as a friend, maintaining their facial features and the wedding's lighting and atmosphere. Ensure the result looks like a natural group photo.";
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
@@ -256,7 +257,7 @@
             const result = await response.json();
             const generatedBase64 = result.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
             
-            if (!generatedBase64) throw new Error("AI 魔法失效了，請重試！");
+            if (!generatedBase64) throw new Error("AI 魔法失敗了，請重試！");
             return `data:image/png;base64,${generatedBase64}`;
         }
 
@@ -268,7 +269,6 @@
             const status = document.getElementById('status-msg');
             const container = document.getElementById('guest-gallery-container');
 
-            // 星空牆監聽
             onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(15)), (snapshot) => {
                 const currentIds = Array.from(container.querySelectorAll('img')).map(img => img.dataset.id);
                 snapshot.docs.forEach(docSnap => {
@@ -289,9 +289,7 @@
                 });
             });
 
-            // 一般上傳
             normalInput.onchange = async (e) => handleUpload(e.target.files[0], false);
-            // AI 上傳
             aiInput.onchange = async (e) => handleUpload(e.target.files[0], true);
 
             async function handleUpload(file, isAI) {
@@ -326,20 +324,49 @@
             document.getElementById('admin-view').classList.remove('hidden');
             const baseInput = document.getElementById('couple-base-input');
             const basePreview = document.getElementById('couple-base-preview');
+            const confirmBtn = document.getElementById('confirm-base-btn');
             const gallery = document.getElementById('admin-gallery');
+            let pendingBase64 = null;
 
-            // 讀取目前的基底照
+            // 1. 初始化讀取目前的基底照
             getDoc(doc(db, 'artifacts', weddingId, 'settings', 'couplePhoto')).then(snap => {
-                if (snap.exists()) basePreview.innerHTML = `<img src="${snap.data().imageUrl}" class="w-full h-full object-cover">`;
+                if (snap.exists()) {
+                    basePreview.innerHTML = `<img src="${snap.data().imageUrl}" class="w-full h-full object-cover">`;
+                }
             });
 
+            // 2. 當選擇檔案時，先做本地預覽
             baseInput.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                const base64 = await resizeAndConvert(file);
-                await setDoc(doc(db, 'artifacts', weddingId, 'settings', 'couplePhoto'), { imageUrl: base64 });
-                basePreview.innerHTML = `<img src="${base64}" class="w-full h-full object-cover">`;
-                alert("新人基底照設定成功！賓客現在可以使用 AI 融合功能了。");
+                
+                pendingBase64 = await resizeAndConvert(file);
+                basePreview.innerHTML = `<img src="${pendingBase64}" class="w-full h-full object-cover opacity-60">`;
+                confirmBtn.classList.remove('hidden'); // 顯示確認按鈕
+                confirmBtn.innerText = "確認上傳基底照";
+                confirmBtn.disabled = false;
+            };
+
+            // 3. 點擊確認按鈕才執行 Firebase 儲存
+            confirmBtn.onclick = async () => {
+                if (!pendingBase64) return;
+                
+                confirmBtn.innerText = "上傳中...";
+                confirmBtn.disabled = true;
+
+                try {
+                    await setDoc(doc(db, 'artifacts', weddingId, 'settings', 'couplePhoto'), { 
+                        imageUrl: pendingBase64,
+                        updatedAt: Date.now()
+                    });
+                    basePreview.querySelector('img').classList.remove('opacity-60');
+                    alert("基底照更新成功！");
+                    confirmBtn.classList.add('hidden');
+                } catch (err) {
+                    alert("上傳失敗，請檢查網路設定。");
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerText = "再試一次";
+                }
             };
 
             const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'));
@@ -349,11 +376,11 @@
                 snapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     const div = document.createElement('div');
-                    div.className = 'relative';
+                    div.className = 'relative group';
                     div.innerHTML = `
                         <img src="${data.imageUrl}" class="w-full h-32 object-cover rounded-lg border ${data.type==='ai'?'border-purple-500 border-2':''}">
                         ${data.type==='ai'?'<span class="absolute top-1 left-1 bg-purple-600 text-[8px] text-white px-1 rounded">AI</span>':''}
-                        <button class="admin-delete-btn" onclick="window.deletePhoto('${docSnap.id}')">刪除</button>
+                        <button class="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-2 py-1 rounded shadow opacity-0 group-hover:opacity-100 transition-opacity" onclick="window.deletePhoto('${docSnap.id}')">刪除</button>
                     `;
                     gallery.appendChild(div);
                 });
@@ -438,7 +465,7 @@
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let w = img.width, h = img.height;
-                        if (w > 800) { h *= 800 / w; w = 800; } // 稍微縮小以節省 API 流量與速度
+                        if (w > 800) { h *= 800 / w; w = 800; }
                         canvas.width = w; canvas.height = h;
                         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
