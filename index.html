@@ -10,49 +10,53 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #fdfaf6; overflow-x: hidden; }
         .gradient-bg { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
         .ai-gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
         @keyframes float-star {
             0% { transform: translate(0, 0) rotate(0deg) scale(1); }
             50% { transform: translate(15px, -20px) rotate(3deg) scale(1.05); }
             100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
+        
         .floating-photo {
             position: absolute; border-radius: 50%; object-fit: cover; border: 4px solid white;
             box-shadow: 0 8px 20px rgba(0,0,0,0.1); animation: float-star 10s ease-in-out infinite;
             transition: opacity 1s ease;
         }
-        #star-container { position: relative; width: 100%; height: 420px; overflow: hidden; background: #fffdfb; border-top: 1px solid #eee; }
+        
+        #star-container { position: relative; width: 100%; height: 380px; overflow: hidden; background: #fffdfb; border-top: 1px solid #eee; }
         .photo-card { box-shadow: 0 30px 60px rgba(0,0,0,0.4); border: 15px solid white; border-bottom: 60px solid white; }
     </style>
 </head>
 <body class="min-h-screen flex flex-col items-center">
 
+    <!-- 載入動畫 -->
     <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-pink-500 mb-4"></div>
-        <p class="text-gray-400 text-sm font-serif">載入中，請稍候...</p>
+        <p class="text-gray-400 text-sm font-serif">正在啟動魔法相館...</p>
     </div>
 
-    <!-- AI 處理中 -->
-    <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md text-center px-6">
+    <!-- AI 處理遮罩 -->
+    <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md text-center px-8">
         <div class="animate-bounce mb-6"><div class="w-16 h-16 rounded-full ai-gradient-bg shadow-2xl"></div></div>
-        <h2 id="ai-status-text" class="text-white text-xl font-bold mb-2 font-serif">AI 魔法融合中...</h2>
-        <p id="ai-sub-text" class="text-white/60 text-sm">正在製作您與新人的專屬合照，請勿關閉視窗</p>
+        <h2 id="ai-status-msg" class="text-white text-xl font-bold mb-2">正在分析照片...</h2>
+        <p class="text-white/50 text-sm">此過程約需 10-15 秒，請勿關閉網頁</p>
     </div>
 
     <!-- 賓客介面 -->
     <div id="guest-view" class="hidden w-full max-w-md px-6 py-10">
         <header class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-gray-800 font-serif">Wedding Moments</h1>
+            <h1 class="text-3xl font-bold text-gray-800 font-serif tracking-tighter">Wedding Moments</h1>
             <p class="text-pink-400 text-xs font-bold tracking-widest mt-1 uppercase">AI Magic Studio</p>
         </header>
 
         <div class="space-y-5 mb-10">
             <div class="relative h-24 rounded-[2rem] gradient-bg border-4 border-white shadow-lg flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
-                <span class="text-white font-bold text-lg font-serif">一般傳送照片</span>
+                <span class="text-white font-bold text-lg">一般傳送照片</span>
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
             <div class="relative h-24 rounded-[2rem] ai-gradient-bg border-4 border-white shadow-xl flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
                 <div class="text-center">
-                    <span class="text-white font-bold text-lg block font-serif">AI 幻影合照</span>
+                    <span class="text-white font-bold text-lg block">AI 幻影合照</span>
                     <span class="text-white/60 text-[10px]">自拍即可與新人穿越合影</span>
                 </div>
                 <input type="file" id="ai-photo-input" accept="image/*" capture="user" class="absolute inset-0 opacity-0 cursor-pointer">
@@ -72,10 +76,11 @@
             </div>
             <div class="flex flex-col md:flex-row items-center gap-8">
                 <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center shadow-inner">
-                    <span class="text-gray-400 text-sm">尚未設定</span>
+                    <span class="text-gray-400 text-sm font-serif">尚未設定</span>
                 </div>
                 <div class="flex-1 space-y-4">
                     <input type="file" id="base-input" accept="image/*" class="block w-full text-sm">
+                    <p class="text-xs text-amber-600">※ 如果上傳失敗，請確認 Firebase Rules 為全開模式。</p>
                     <button id="save-base-btn" class="hidden w-full py-4 bg-pink-500 text-white rounded-full font-bold shadow-lg">確認儲存並發佈</button>
                 </div>
             </div>
@@ -83,14 +88,13 @@
         <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
     </div>
 
-    <!-- 大螢幕播放 -->
+    <!-- 大螢幕模式 -->
     <div id="dashboard-view" class="hidden fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center"></div>
     </div>
 
     <script type="module">
-        // --- 核心配置 ---
-        // ！！！請填入您新申請的 API Key ！！！
+        // 請填入您新申請的 API Key
         const apiKey = "AIzaSyC8bfxK7FbQCCDBoa479idrAgBFXLq-SC0"; 
 
         const firebaseConfig = {
@@ -121,64 +125,57 @@
             else showGuest();
         });
 
-        // --- AI 融合邏輯 (加入指數退避與多模態輸出) ---
+        // --- 修正後的 AI 融合邏輯 (Gemini 2.0 + Imagen 3.0) ---
         async function runAI(guestB64) {
-            if (!apiKey) throw new Error("尚未設定 API Key");
+            if (!apiKey) throw new Error("尚未填入 API Key");
+            const statusMsg = document.getElementById('ai-status-msg');
             
             // 1. 讀取基底照
-            let coupleB64;
-            try {
-                const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
-                if (!snap.exists()) throw new Error("請先在管理頁面上傳新人合照");
-                coupleB64 = snap.data().imageUrl.split(',')[1];
-            } catch (e) {
-                throw new Error("【資料庫錯誤】讀取基底照失敗: " + e.message);
-            }
+            const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
+            if (!snap.exists()) throw new Error("請先在後台設定新人基底照");
+            const coupleB64 = snap.data().imageUrl.split(',')[1];
 
-            const guestData = guestB64.split(',')[1];
-
-            const payload = {
+            // 步驟一：分析照片並產生 Prompt (使用最穩定的 gemini-2.0-flash)
+            statusMsg.innerText = "正在分析人像特徵...";
+            const analysisPayload = {
                 contents: [{
                     parts: [
-                        { text: "This is a wedding photo (Image 1) and a selfie (Image 2). Blend the guest from Image 2 into the wedding scene of Image 1 naturally. Output only the final blended image." },
+                        { text: "This is a wedding couple (Image 1) and a guest (Image 2). Describe a highly detailed scene in English where the guest is standing naturally beside the couple in the same wedding setting. Include lighting and color consistency. Keep it under 100 words." },
                         { inlineData: { mimeType: "image/jpeg", data: coupleB64 } },
-                        { inlineData: { mimeType: "image/jpeg", data: guestData } }
+                        { inlineData: { mimeType: "image/jpeg", data: guestB64.split(',')[1] } }
                     ]
-                }],
-                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
+                }]
             };
 
-            // 指數退避重試邏輯
-            const delays = [1000, 2000, 4000];
-            let lastErr;
+            const analysisRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(analysisPayload)
+            });
 
-            for (let i = 0; i <= delays.length; i++) {
-                try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+            if (!analysisRes.ok) throw new Error(`分析失敗 (HTTP ${analysisRes.status})，請確認模型權限。`);
+            const analysisData = await analysisRes.json();
+            const generatedPrompt = analysisData.candidates[0].content.parts[0].text;
 
-                    if (!res.ok) {
-                        const errText = await res.text();
-                        throw new Error(`Google API 報錯 (HTTP ${res.status}): ${errText}`);
-                    }
+            // 步驟二：生成影像 (使用通用的 imagen-3.0-generate-001)
+            statusMsg.innerText = "正在施放 AI 魔法...";
+            const genPayload = {
+                instances: [{ prompt: generatedPrompt }],
+                parameters: { sampleCount: 1 }
+            };
 
-                    const data = await res.json();
-                    const gen = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-                    if (!gen) throw new Error("AI 未能產出圖片，請嘗試換張自拍照");
-                    return `data:image/png;base64,${gen}`;
+            const genRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(genPayload)
+            });
 
-                } catch (e) {
-                    lastErr = e;
-                    if (i < delays.length) await new Promise(r => setTimeout(r, delays[i]));
-                }
-            }
-            throw new Error("【Google AI 錯誤】" + lastErr.message);
+            if (!genRes.ok) throw new Error(`生成失敗。可能是 Imagen 模型尚未對此 Key 開放。`);
+            const genData = await genRes.json();
+            return `data:image/png;base64,${genData.predictions[0].bytesBase64Encoded}`;
         }
 
-        // --- 賓客介面 ---
+        // --- 賓客端 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const status = document.getElementById('status-msg');
@@ -191,7 +188,7 @@
                     if (!ids.includes(p.id)) {
                         const img = document.createElement('img');
                         img.src = p.imageUrl; img.dataset.id = p.id; img.className = 'floating-photo';
-                        const sz = Math.random()*40+80;
+                        const sz = Math.random()*50+80;
                         img.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*80+5}%;top:${Math.random()*60+20}%;opacity:0;animation-delay:-${Math.random()*10}s`;
                         container.appendChild(img);
                         setTimeout(() => img.style.opacity='1', 100);
@@ -204,13 +201,13 @@
                 if (ai) document.getElementById('ai-processing').classList.remove('hidden');
                 status.innerText = ai ? "✨ AI 魔法運作中..." : "💖 傳送成功！";
                 try {
-                    let b64 = await resizeImage(file, 800);
+                    let b64 = await resizeImage(file, 600); // 降低解析度確保不超過 Firestore 1MB 限制
                     if (ai) b64 = await runAI(b64);
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64, timestamp: Date.now(), type: ai ? 'ai' : 'normal'
                     });
                 } catch (e) {
-                    alert(e.message);
+                    alert("操作失敗：\n" + e.message + "\n\n建議：請確認 Firebase Rules 或 API 權限。");
                 } finally {
                     document.getElementById('ai-processing').classList.add('hidden');
                     status.innerText = "";
@@ -232,16 +229,13 @@
                 if (!apiKey) return alert("❌ 請先填入 API Key");
                 testBtn.innerText = "⏳ 連線中...";
                 try {
-                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: "Hi" }] }] })
                     });
-                    if (res.ok) alert("✅ 連線成功！文字生成功能正常。");
-                    else {
-                        const err = await res.json();
-                        alert("❌ 失敗: " + err.error.message);
-                    }
+                    if (res.ok) alert("✅ 連線成功！Gemini 2.0 Flash 模型運作正常。");
+                    else alert("❌ 失敗：請檢查 API Key 是否正確。");
                 } catch (e) { alert("❌ 網路連線錯誤"); }
                 finally { testBtn.innerText = "🔍 測試 API 連線"; }
             };
@@ -251,19 +245,18 @@
             });
 
             input.onchange = async (e) => {
-                pending = await resizeImage(e.target.files[0], 800);
+                pending = await resizeImage(e.target.files[0], 600);
                 preview.innerHTML = `<img src="${pending}" class="w-full h-full object-cover opacity-50">`;
                 btn.classList.remove('hidden');
             };
 
             btn.onclick = async () => {
-                btn.disabled = true; btn.innerText = "正在儲存...";
                 try {
                     await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pending });
                     alert("基底照設定成功！");
                     btn.classList.add('hidden');
-                } catch (e) { alert("儲存失敗，請檢查 Firebase Rules 權限。"); }
-                finally { btn.disabled = false; btn.innerText = "確認儲存並發佈"; }
+                    preview.querySelector('img').classList.remove('opacity-50');
+                } catch (e) { alert("上傳失敗：請確認 Firebase Rules 權限。"); }
             };
 
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
@@ -299,16 +292,16 @@
                         </div>`;
                         if (cont.children.length > 0) {
                             const old = cont.children[0]; old.style.transition = "all 1s"; old.style.opacity = "0";
-                            setTimeout(() => old.remove(), 1500);
+                            setTimeout(() => old.remove(), 1000);
                         }
-                        cont.appendChild(frame); await new Promise(r => setTimeout(r, 6000));
+                        cont.appendChild(frame); await new Promise(r => setTimeout(r, 6500));
                         idx = (idx + 1) % all.length;
                     } else await new Promise(r => setTimeout(r, 1000));
                 }
             }
         }
 
-        function resizeImage(file, max = 800) {
+        function resizeImage(file, max = 600) {
             return new Promise((res) => {
                 const r = new FileReader(); r.readAsDataURL(file);
                 r.onload = (e) => {
@@ -319,7 +312,7 @@
                         if (w > max || h > max) { if (w > h) { h *= max/w; w = max; } else { w *= max/h; h = max; } }
                         c.width = w; c.height = h;
                         c.getContext('2d').drawImage(i, 0, 0, w, h);
-                        res(c.toDataURL('image/jpeg', 0.6));
+                        res(c.toDataURL('image/jpeg', 0.4)); // 降低品質確保在 1MB 內
                     };
                 };
             });
