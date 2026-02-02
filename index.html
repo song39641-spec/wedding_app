@@ -12,13 +12,13 @@
             font-family: 'Noto Serif TC', serif;
             background-color: #fdfaf6;
             -webkit-tap-highlight-color: transparent;
+            overflow-x: hidden;
         }
 
         .gradient-bg {
             background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
         }
 
-        /* 優化後的按鈕陰影：使用更柔和的層次感 */
         .soft-shadow {
             box-shadow: 0 10px 30px -5px rgba(251, 194, 235, 0.5), 
                         0 8px 15px -8px rgba(166, 193, 238, 0.4);
@@ -29,10 +29,7 @@
             overflow: hidden;
             display: inline-block;
             transition: all 0.3s ease;
-        }
-
-        .upload-wrapper:active {
-            transform: scale(0.96);
+            z-index: 50;
         }
 
         #photo-input {
@@ -44,19 +41,37 @@
             cursor: pointer;
             width: 100%;
             height: 100%;
-            z-index: 10;
+            z-index: 60;
         }
 
-        /* 輪播與牆面動畫 */
-        .fade-in-up {
-            animation: fadeInUp 0.6s ease-out forwards;
+        /* --- 星空漂浮動畫 --- */
+        @keyframes float-star {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(15px, -20px) rotate(2deg) scale(1.05); }
+            66% { transform: translate(-10px, -10px) rotate(-2deg) scale(0.95); }
+            100% { transform: translate(0, 0) rotate(0deg) scale(1); }
         }
 
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        .floating-photo {
+            position: absolute;
+            border-radius: 50%; /* 圓形看起來更像星體 */
+            object-fit: cover;
+            border: 3px solid white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            animation: float-star 8s ease-in-out infinite;
+            transition: opacity 1s ease-in-out;
         }
 
+        /* 賓客牆容器高度 */
+        #guest-gallery-container {
+            position: relative;
+            width: 100%;
+            height: 450px;
+            overflow: hidden;
+            background: radial-gradient(circle at center, #fffcf9 0%, #fdfaf6 100%);
+        }
+
+        /* 大螢幕播放動畫 */
         .slide-up {
             animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -72,15 +87,6 @@
             border-bottom: 50px solid white;
         }
 
-        .guest-grid-item {
-            aspect-ratio: 1/1;
-            object-fit: cover;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            transition: transform 0.3s ease;
-        }
-
-        /* 管理員介面小工具 */
         .admin-delete-btn {
             background: rgba(239, 68, 68, 0.9);
             color: white;
@@ -90,74 +96,74 @@
             position: absolute;
             top: 4px;
             right: 4px;
+            z-index: 20;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center overflow-x-hidden">
+<body class="min-h-screen flex flex-col items-center">
 
     <!-- 載入中遮罩 -->
-    <div id="loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
+    <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500 mb-4"></div>
         <p class="text-gray-500">正在開啟幸福之門...</p>
     </div>
 
     <!-- 賓客上傳模式 (Guest Mode) -->
-    <div id="guest-view" class="hidden w-full max-w-md px-6 py-10 flex flex-col items-center">
-        <header class="mb-10 text-center">
+    <div id="guest-view" class="hidden w-full max-w-md flex flex-col items-center">
+        <header class="py-10 px-6 text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2 font-serif tracking-widest">Wedding Moments</h1>
-            <p class="text-gray-500 italic">記錄每一刻幸福光影</p>
+            <p class="text-gray-500 italic">讓愛在星空中漂浮流動</p>
         </header>
 
-        <!-- 上傳大按鈕區 (優化陰影與外觀) -->
-        <div class="upload-wrapper mb-12">
-            <div class="w-60 h-60 rounded-full gradient-bg soft-shadow flex flex-col items-center justify-center border-[6px] border-white/80">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-14 w-14 text-white mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <!-- 上傳大按鈕區 -->
+        <div class="upload-wrapper mb-8">
+            <div class="w-48 h-48 rounded-full gradient-bg soft-shadow flex flex-col items-center justify-center border-[6px] border-white/80">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span class="text-white text-lg font-bold tracking-[0.2em] font-serif">傳送照片</span>
+                <span class="text-white text-md font-bold tracking-[0.2em] font-serif">傳送照片</span>
             </div>
             <input type="file" id="photo-input" accept="image/*" title="選擇照片">
         </div>
 
-        <div id="status-msg" class="mb-8 text-sm font-medium text-pink-600 h-6 text-center"></div>
+        <div id="status-msg" class="mb-4 text-sm font-medium text-pink-600 h-6 text-center"></div>
 
-        <!-- 賓客即時牆 (流動感優化) -->
-        <div class="w-full border-t border-gray-100 pt-8">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-bold text-gray-700 font-serif flex items-center gap-2">
-                    <span class="w-2 h-2 bg-pink-400 rounded-full"></span>
-                    即時祝福牆
+        <!-- 賓客星空牆 (漂浮效果) -->
+        <div id="guest-gallery-container" class="border-t border-gray-100">
+            <div class="absolute top-4 left-6 z-10">
+                <h2 class="text-sm font-bold text-gray-400 font-serif flex items-center gap-2">
+                    <span class="w-2 h-2 bg-pink-300 rounded-full animate-pulse"></span>
+                    最新祝福星空
                 </h2>
-                <span class="text-xs text-gray-400 italic">最新上傳照片</span>
             </div>
-            <div id="guest-gallery" class="grid grid-cols-3 gap-3">
-                <!-- 照片會流動式出現在這裡 -->
-            </div>
+            <!-- 照片會像星星一樣隨機漂浮在這裡 -->
         </div>
+        
+        <footer class="py-8 text-xs text-gray-300 text-center">
+            &copy; Forever & Always Wedding
+        </footer>
     </div>
 
-    <!-- 管理員模式 (Admin Mode) -->
+    <!-- 管理員模式 (Admin Mode) - 保持格狀以便管理 -->
     <div id="admin-view" class="hidden w-full max-w-4xl px-6 py-10">
         <header class="mb-8 flex justify-between items-center border-b pb-4">
-            <h1 class="text-2xl font-bold text-red-600 font-serif">管理後台 (刪除照片)</h1>
+            <h1 class="text-2xl font-bold text-red-600 font-serif">照片管理 (點擊刪除)</h1>
             <p id="photo-count" class="text-gray-500"></p>
         </header>
-        <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <!-- 所有的管理選項 -->
-        </div>
+        <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </div>
 
     <!-- 大螢幕播放模式 (Dashboard Mode) -->
     <div id="dashboard-view" class="hidden fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center">
-            <div id="empty-state" class="text-white/30 text-2xl animate-pulse font-serif tracking-[0.3em]">
-                WAITING FOR MOMENTS...
+            <div id="empty-state" class="text-white/20 text-2xl animate-pulse font-serif tracking-[0.3em]">
+                MOMENTS IN THE STARS...
             </div>
         </div>
         <div class="absolute bottom-10 left-10 bg-black/40 backdrop-blur-xl p-8 rounded-3xl border border-white/10 shadow-2xl">
             <p class="text-white font-bold text-3xl mb-2 tracking-wide font-serif">掃碼分享您的感動</p>
-            <p class="text-white/40 text-xl italic font-serif">Let's Celebrate Together</p>
+            <p class="text-white/40 text-xl italic font-serif">讓我們一同見證幸福</p>
         </div>
     </div>
 
@@ -182,92 +188,112 @@
         const weddingId = 'wedding-app'; 
 
         const urlParams = new URLSearchParams(window.location.search);
-        const mode = urlParams.get('mode'); // admin, dashboard, null
+        const mode = urlParams.get('mode');
 
         signInAnonymously(auth);
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 document.getElementById('loading').classList.add('hidden');
-                if (mode === 'admin') {
-                    showAdmin();
-                } else if (mode === 'dashboard') {
-                    showDashboard();
-                } else {
-                    showGuest();
-                }
+                if (mode === 'admin') showAdmin();
+                else if (mode === 'dashboard') showDashboard();
+                else showGuest();
             }
         });
 
-        // --- 管理員功能 ---
-        function showAdmin() {
-            document.getElementById('admin-view').classList.remove('hidden');
-            const gallery = document.getElementById('admin-gallery');
-            const countLabel = document.getElementById('photo-count');
-
-            const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                gallery.innerHTML = '';
-                countLabel.innerText = `目前共有 ${snapshot.size} 張照片`;
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const container = document.createElement('div');
-                    container.className = 'relative group';
-                    container.innerHTML = `
-                        <img src="${data.imageUrl}" class="w-full h-32 object-cover rounded-lg shadow">
-                        <button class="admin-delete-btn shadow-lg" onclick="window.deletePhoto('${docSnap.id}')">刪除</button>
-                    `;
-                    gallery.appendChild(container);
-                });
-            });
-
-            // 全域刪除函數
-            window.deletePhoto = async (docId) => {
-                if(confirm('確定要刪除這張照片嗎？大螢幕也會同步移除喔！')) {
-                    await deleteDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'photos', docId));
-                }
-            };
-        }
-
-        // --- 賓客功能 ---
+        // --- 賓客功能：星空牆邏輯 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const input = document.getElementById('photo-input');
             const status = document.getElementById('status-msg');
-            const gallery = document.getElementById('guest-gallery');
+            const container = document.getElementById('guest-gallery-container');
 
-            // 即時牆流動監聽
+            // 隨機定位與動畫生成
             const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(15));
             onSnapshot(q, (snapshot) => {
-                gallery.innerHTML = '';
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    const img = document.createElement('img');
-                    img.src = data.imageUrl;
-                    img.className = 'guest-grid-item fade-in-up';
-                    gallery.appendChild(img);
+                // 不直接清除 innerHTML，避免動畫中斷，改用同步機制
+                const currentIds = Array.from(container.querySelectorAll('img')).map(img => img.dataset.id);
+                const newIds = snapshot.docs.map(doc => doc.id);
+
+                // 移除已刪除的
+                currentIds.forEach(id => {
+                    if (!newIds.includes(id)) {
+                        const el = container.querySelector(`[data-id="${id}"]`);
+                        if(el) el.style.opacity = '0';
+                        setTimeout(() => el?.remove(), 1000);
+                    }
+                });
+
+                // 新增照片
+                snapshot.docs.forEach(docSnap => {
+                    if (!currentIds.includes(docSnap.id)) {
+                        const data = docSnap.data();
+                        const img = document.createElement('img');
+                        img.src = data.imageUrl;
+                        img.dataset.id = docSnap.id;
+                        img.className = 'floating-photo';
+                        
+                        // 隨機尺寸 (80px ~ 140px)
+                        const size = Math.floor(Math.random() * 60) + 80;
+                        img.style.width = `${size}px`;
+                        img.style.height = `${size}px`;
+
+                        // 隨機位置 (避免太靠近邊緣)
+                        img.style.left = `${Math.random() * 70 + 5}%`;
+                        img.style.top = `${Math.random() * 70 + 10}%`;
+
+                        // 隨機動畫時間與延遲
+                        img.style.animationDuration = `${Math.random() * 4 + 6}s`;
+                        img.style.animationDelay = `${Math.random() * -10}s`;
+                        
+                        img.style.opacity = '0';
+                        container.appendChild(img);
+                        setTimeout(() => img.style.opacity = '1', 100);
+                    }
                 });
             });
 
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-
-                status.innerText = "✨ 正在傳送您的祝福...";
-                
+                status.innerText = "✨ 正在將您的祝福送往星空...";
                 try {
                     const base64 = await resizeAndConvert(file);
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: base64,
                         timestamp: Date.now()
                     });
-                    status.innerText = "💖 傳送成功！感謝參與";
+                    status.innerText = "💖 傳送成功！";
                     input.value = "";
                     setTimeout(() => status.innerText = "", 3000);
                 } catch (err) {
-                    status.innerText = "⚠️ 系統忙碌中，請重試一次";
-                    console.error(err);
+                    status.innerText = "⚠️ 傳送失敗，請重試";
                 }
+            };
+        }
+
+        // --- 管理員功能 ---
+        function showAdmin() {
+            document.getElementById('admin-view').classList.remove('hidden');
+            const gallery = document.getElementById('admin-gallery');
+            const countLabel = document.getElementById('photo-count');
+            const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'));
+            onSnapshot(q, (snapshot) => {
+                gallery.innerHTML = '';
+                countLabel.innerText = `目前共有 ${snapshot.size} 張照片`;
+                snapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    const div = document.createElement('div');
+                    div.className = 'relative group';
+                    div.innerHTML = `
+                        <img src="${data.imageUrl}" class="w-full h-32 object-cover rounded-lg">
+                        <button class="admin-delete-btn" onclick="window.deletePhoto('${docSnap.id}')">刪除</button>
+                    `;
+                    gallery.appendChild(div);
+                });
+            });
+            window.deletePhoto = async (id) => {
+                if(confirm('確定刪除？')) await deleteDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'photos', id));
             };
         }
 
@@ -276,24 +302,17 @@
             document.getElementById('dashboard-view').classList.remove('hidden');
             const container = document.getElementById('slideshow-container');
             const emptyState = document.getElementById('empty-state');
-            
             let allPhotos = [];
             let photoQueue = [];
             let isPlaying = false;
 
-            const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'));
-            onSnapshot(q, (snapshot) => {
-                // 如果是刪除操作，重新整理本地列表
-                const currentUrls = [];
-                snapshot.forEach(docSnap => currentUrls.push(docSnap.data().imageUrl));
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc')), (snapshot) => {
+                const currentUrls = snapshot.docs.map(d => d.data().imageUrl);
                 allPhotos = currentUrls;
-
-                snapshot.docChanges().forEach((change) => {
+                snapshot.docChanges().forEach(change => {
                     if (change.type === "added") {
-                        const data = change.doc.data();
-                        if (!photoQueue.includes(data.imageUrl)) {
-                            photoQueue.push(data.imageUrl);
-                        }
+                        const url = change.doc.data().imageUrl;
+                        if (!photoQueue.includes(url)) photoQueue.push(url);
                         if (!isPlaying && allPhotos.length > 0) startLoop();
                     }
                 });
@@ -303,41 +322,29 @@
                 if (isPlaying) return;
                 isPlaying = true;
                 emptyState.classList.add('hidden');
-
-                let historyIndex = 0;
+                let idx = 0;
                 while (true) {
-                    // 如果這張照片被刪除了，跳過
-                    let nextImg = photoQueue.length > 0 ? photoQueue.shift() : allPhotos[historyIndex];
-                    
-                    if (nextImg && allPhotos.includes(nextImg)) {
-                        await displayImage(nextImg);
-                        historyIndex = (historyIndex + 1) % allPhotos.length;
+                    let next = photoQueue.length > 0 ? photoQueue.shift() : allPhotos[idx];
+                    if (next && allPhotos.includes(next)) {
+                        await displayImage(next);
+                        idx = (idx + 1) % allPhotos.length;
                     } else if (allPhotos.length > 0) {
-                        historyIndex = (historyIndex + 1) % allPhotos.length;
+                        idx = (idx + 1) % allPhotos.length;
                         await new Promise(r => setTimeout(r, 100));
                     } else {
                         emptyState.classList.remove('hidden');
-                        isPlaying = false;
-                        break;
+                        isPlaying = false; break;
                     }
                 }
             }
 
             function displayImage(url) {
                 return new Promise((resolve) => {
-                    const imgFrame = document.createElement('div');
-                    imgFrame.className = "absolute inset-0 flex items-center justify-center p-12 slide-up";
-                    imgFrame.innerHTML = `
-                        <div class="photo-card relative bg-white p-5 transform">
-                            <img src="${url}" class="max-w-full max-h-[75vh] object-contain">
-                            <div class="mt-10 text-center text-gray-400 font-serif text-4xl tracking-[0.2em] italic">
-                                Forever Love
-                            </div>
-                        </div>
-                    `;
-                    
+                    const frame = document.createElement('div');
+                    frame.className = "absolute inset-0 flex items-center justify-center p-12 slide-up";
+                    frame.innerHTML = `<div class="photo-card bg-white p-5 transform"><img src="${url}" class="max-w-full max-h-[75vh] object-contain"><div class="mt-10 text-center text-gray-400 font-serif text-4xl italic">Forever Love</div></div>`;
                     if (container.children.length > 1) {
-                        const old = Array.from(container.children).find(el => el !== emptyState && el !== imgFrame);
+                        const old = container.children[0] === emptyState ? null : container.children[0];
                         if (old) {
                             old.style.transition = "all 1.5s ease";
                             old.style.opacity = "0";
@@ -345,7 +352,7 @@
                             setTimeout(() => old.remove(), 1500);
                         }
                     }
-                    container.appendChild(imgFrame);
+                    container.appendChild(frame);
                     setTimeout(resolve, 6000);
                 });
             }
@@ -360,13 +367,10 @@
                     img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
-                        let width = img.width;
-                        let height = img.height;
-                        const MAX = 1000;
-                        if (width > MAX) { height *= MAX / width; width = MAX; }
-                        canvas.width = width; canvas.height = height;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
+                        let w = img.width, h = img.height;
+                        if (w > 1000) { h *= 1000 / w; w = 1000; }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                 };
