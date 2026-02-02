@@ -13,27 +13,24 @@
             background-color: #fdfaf6;
         }
 
-        .fade-in {
-            animation: fadeIn 1s ease-in-out;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: scale(0.95); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        .gradient-bg {
-            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
-        }
-
         /* 輪播動畫 */
         .slide-up {
             animation: slideUp 0.8s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         @keyframes slideUp {
-            from { transform: translateY(100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from { transform: translateY(100%) rotate(5deg); opacity: 0; }
+            to { transform: translateY(0) rotate(1deg); opacity: 1; }
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+
+        .photo-card {
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            border: 15px solid white;
+            border-bottom: 60px solid white;
         }
     </style>
 </head>
@@ -47,49 +44,49 @@
     <!-- 賓客上傳模式 (Guest Mode) -->
     <div id="guest-view" class="hidden w-full max-w-md px-6 text-center">
         <header class="mb-12">
-            <h1 class="text-3xl font-bold text-gray-800 mb-2">Wedding Moments</h1>
+            <h1 class="text-3xl font-bold text-gray-800 mb-2 font-serif">Wedding Moments</h1>
             <p class="text-gray-500 italic">分享您眼中的幸福瞬間</p>
         </header>
 
         <div class="relative group">
-            <input type="file" id="photo-input" accept="image/*" capture="environment" class="hidden">
+            <!-- 移除 capture 屬性以支援相簿上傳 -->
+            <input type="file" id="photo-input" accept="image/*" class="hidden">
             <button onclick="document.getElementById('photo-input').click()" 
                 class="w-64 h-64 rounded-full gradient-bg shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 hover:scale-105 mx-auto border-8 border-white">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span class="text-white text-xl font-bold tracking-widest">拍照 / 上傳</span>
+                <span class="text-white text-xl font-bold tracking-widest font-serif">傳送祝福照片</span>
             </button>
         </div>
 
-        <div id="status-msg" class="mt-8 text-sm font-medium text-gray-600 h-6"></div>
+        <div id="status-msg" class="mt-8 text-sm font-medium text-pink-600 h-6"></div>
         
         <footer class="mt-20 text-xs text-gray-400">
-            Powered by Digital Wedding Assistant
+            點擊上方按鈕，可拍照或選擇手機相簿照片
         </footer>
     </div>
 
     <!-- 大螢幕播放模式 (Dashboard Mode) -->
-    <div id="dashboard-view" class="hidden fixed inset-0 bg-black flex items-center justify-center">
+    <div id="dashboard-view" class="hidden fixed inset-0 bg-neutral-900 flex items-center justify-center">
         <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center">
-            <div id="empty-state" class="text-white text-2xl animate-pulse">
+            <div id="empty-state" class="text-white text-2xl animate-pulse font-serif">
                 等待照片上傳中...
             </div>
             <!-- 照片將動態插入此處 -->
         </div>
         
         <!-- 左下角提示區 -->
-        <div class="absolute bottom-8 left-8 bg-white p-4 rounded-xl shadow-lg flex items-center gap-4 opacity-80 hover:opacity-100 transition-opacity">
+        <div class="absolute bottom-10 left-10 bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-2xl flex items-center gap-4">
             <div class="text-left">
-                <p class="text-black font-bold text-lg">掃碼分享照片</p>
-                <p class="text-gray-500 text-sm">您的祝福將即時顯示在螢幕上</p>
+                <p class="text-white font-bold text-2xl mb-1">掃碼分享您的照片</p>
+                <p class="text-white/60 text-lg italic">讓我們一起記錄這完美的時刻</p>
             </div>
         </div>
     </div>
 
     <script type="module">
-        // --- 使用您提供的 Firebase 配置 ---
         const firebaseConfig = {
             apiKey: "AIzaSyBepjw82kk-gC0XzzzswLNDDJTGSjrPK54",
             authDomain: "wedding-moments-9ac34.firebaseapp.com",
@@ -100,29 +97,20 @@
             measurementId: "G-2TXYY38NH9"
         };
 
-        // 引入 Firebase SDK
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // 初始化
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        
-        // 此 ID 必須與您在 Firebase Console 設定的 Rules 路徑一致
         const weddingId = 'wedding-app'; 
 
         let currentUser = null;
-
-        // 判斷模式 (?mode=dashboard)
         const urlParams = new URLSearchParams(window.location.search);
         const isDashboard = urlParams.get('mode') === 'dashboard';
 
-        // 匿名登入
-        signInAnonymously(auth).catch((error) => {
-            console.error("登入失敗:", error);
-        });
+        signInAnonymously(auth);
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
@@ -136,7 +124,7 @@
             }
         });
 
-        // 賓客模式：上傳照片
+        // --- 賓客功能 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const input = document.getElementById('photo-input');
@@ -144,62 +132,85 @@
 
             input.onchange = async (e) => {
                 const file = e.target.files[0];
-                if (!file || !currentUser) return;
+                if (!file) return;
 
-                status.innerText = "正在傳送您的祝福...";
+                status.innerText = "正在傳送照片中...";
                 
                 try {
                     const base64 = await resizeAndConvert(file);
-                    
-                    // 存入指定的路徑
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: base64,
                         timestamp: Date.now(),
                         userId: currentUser.uid
                     });
-
-                    status.innerText = "上傳成功！感謝您的分享 ❤️";
+                    status.innerText = "上傳成功！感謝您的參與 ❤️";
                     input.value = "";
                     setTimeout(() => status.innerText = "", 3000);
                 } catch (err) {
-                    status.innerText = "上傳失敗，請再試一次";
+                    status.innerText = "系統忙碌中，請稍後再試";
                     console.error(err);
                 }
             };
         }
 
-        // 大螢幕模式：即時監聽
-        function showDashboard() {
+        // --- 大螢幕播放功能 ---
+        async function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const container = document.getElementById('slideshow-container');
             const emptyState = document.getElementById('empty-state');
             
-            let photoQueue = [];
+            let allPhotos = []; // 存儲所有歷史照片
+            let photoQueue = []; // 即時插播隊列
             let isPlaying = false;
 
-            // 監聽新照片
+            // 1. 抓取已有的歷史照片
+            const historySnap = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
+            historySnap.forEach(doc => {
+                allPhotos.push(doc.data().imageUrl);
+            });
+
+            // 2. 即時監聽新照片
             const q = collection(db, 'artifacts', weddingId, 'public', 'data', 'photos');
             onSnapshot(q, (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
-                        photoQueue.push(data.imageUrl);
-                        if (!isPlaying) startSlideshow();
+                        // 檢查是否為新上傳 (非歷史照片)
+                        if (!allPhotos.includes(data.imageUrl)) {
+                            photoQueue.push(data.imageUrl);
+                            allPhotos.push(data.imageUrl); // 加入歷史庫
+                        }
+                        if (!isPlaying && (allPhotos.length > 0)) startLoop();
                     }
                 });
             });
 
-            async function startSlideshow() {
-                if (photoQueue.length === 0) return;
+            // 循環播放邏輯
+            async function startLoop() {
+                if (isPlaying) return;
                 isPlaying = true;
                 emptyState.classList.add('hidden');
 
-                while (photoQueue.length > 0) {
-                    const nextImg = photoQueue.shift();
-                    await displayImage(nextImg);
+                let historyIndex = 0;
+
+                while (true) {
+                    let nextImg = "";
+
+                    // 優先權：如果有「新照片」在隊列，先播新照片
+                    if (photoQueue.length > 0) {
+                        nextImg = photoQueue.shift();
+                    } else if (allPhotos.length > 0) {
+                        // 否則，循環播放歷史照片
+                        nextImg = allPhotos[historyIndex];
+                        historyIndex = (historyIndex + 1) % allPhotos.length;
+                    }
+
+                    if (nextImg) {
+                        await displayImage(nextImg);
+                    } else {
+                        await new Promise(r => setTimeout(r, 2000));
+                    }
                 }
-                
-                isPlaying = false;
             }
 
             function displayImage(url) {
@@ -207,30 +218,32 @@
                     const imgFrame = document.createElement('div');
                     imgFrame.className = "absolute inset-0 flex items-center justify-center p-12 slide-up";
                     imgFrame.innerHTML = `
-                        <div class="relative bg-white p-4 shadow-2xl rounded-sm transform rotate-1">
-                            <img src="${url}" class="max-w-full max-h-[80vh] object-contain shadow-inner">
-                            <div class="mt-6 text-center text-gray-400 italic font-serif text-xl">
-                                Wedding Memories - New Moment
+                        <div class="photo-card relative bg-white p-6 transform">
+                            <img src="${url}" class="max-w-full max-h-[70vh] object-contain">
+                            <div class="mt-8 text-center text-gray-500 font-serif text-3xl tracking-widest italic">
+                                Forever & Always
                             </div>
                         </div>
                     `;
                     
+                    // 移除上一張
                     if (container.children.length > 1) {
-                        const old = container.children[0];
-                        if (old !== emptyState) {
-                            old.style.transition = "opacity 1s ease";
+                        const old = Array.from(container.children).find(el => el !== emptyState && el !== imgFrame);
+                        if (old) {
+                            old.style.transition = "all 1.5s ease";
                             old.style.opacity = "0";
-                            setTimeout(() => old.remove(), 1000);
+                            old.style.transform = "scale(0.8) translateY(-100px)";
+                            setTimeout(() => old.remove(), 1500);
                         }
                     }
 
                     container.appendChild(imgFrame);
-                    setTimeout(resolve, 6000); // 顯示 6 秒
+                    setTimeout(resolve, 5000); // 每張展示 5 秒
                 });
             }
         }
 
-        // 圖片壓縮工具
+        // 圖片壓縮
         function resizeAndConvert(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -242,7 +255,7 @@
                         const canvas = document.createElement('canvas');
                         let width = img.width;
                         let height = img.height;
-                        const MAX_WIDTH = 800;
+                        const MAX_WIDTH = 1000; // 提升一點畫質
                         if (width > MAX_WIDTH) {
                             height *= MAX_WIDTH / width;
                             width = MAX_WIDTH;
@@ -251,7 +264,7 @@
                         canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.7));
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
                     };
                 };
             });
