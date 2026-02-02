@@ -31,56 +31,54 @@
         <p class="text-gray-400 text-sm font-serif">載入中，請稍候...</p>
     </div>
 
+    <!-- AI 處理中遮罩 -->
     <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
         <div class="animate-bounce mb-6"><div class="w-16 h-16 rounded-full ai-gradient-bg shadow-2xl"></div></div>
-        <h2 id="ai-status-text" class="text-white text-xl font-bold mb-2">AI 魔法融合中...</h2>
-        <p class="text-white/60 text-sm">正在製作您與新人的專屬合照</p>
+        <h2 id="ai-status-text" class="text-white text-xl font-bold mb-2 font-serif">AI 魔法融合中...</h2>
+        <p id="ai-sub-text" class="text-white/60 text-sm text-center px-6">正在製作您與新人的專屬合照</p>
     </div>
 
+    <!-- 賓客介面 -->
     <div id="guest-view" class="hidden w-full max-w-md px-6 py-10">
         <header class="text-center mb-10">
-            <h1 class="text-3xl font-bold text-gray-800 font-serif tracking-tighter">Wedding Moments</h1>
+            <h1 class="text-3xl font-bold text-gray-800 font-serif">Wedding Moments</h1>
             <p class="text-pink-400 text-xs font-bold tracking-widest mt-1 uppercase">AI Magic Studio</p>
         </header>
 
         <div class="space-y-5 mb-10">
             <div class="relative h-24 rounded-[2rem] gradient-bg border-4 border-white shadow-lg flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
-                <span class="text-white font-bold text-lg">一般分享照片</span>
+                <span class="text-white font-bold text-lg font-serif">一般傳送照片</span>
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
             <div class="relative h-24 rounded-[2rem] ai-gradient-bg border-4 border-white shadow-xl flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
                 <div class="text-center">
-                    <span class="text-white font-bold text-lg block">AI 幻影合照</span>
-                    <span class="text-white/60 text-[10px]">自拍即可與新人合體</span>
+                    <span class="text-white font-bold text-lg block font-serif">AI 幻影合照</span>
+                    <span class="text-white/60 text-[10px]">自拍即可與新人穿越合影</span>
                 </div>
                 <input type="file" id="ai-photo-input" accept="image/*" capture="user" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
         </div>
 
         <div id="status-msg" class="text-center text-sm font-medium text-pink-600 mb-6 h-4 italic"></div>
-
-        <div id="star-container" class="rounded-[2.5rem] shadow-inner">
-            <div class="absolute top-4 left-6 text-[10px] text-gray-300 font-bold tracking-widest uppercase">Starry Moments</div>
-        </div>
+        <div id="star-container" class="rounded-[2.5rem] shadow-inner"></div>
     </div>
 
     <!-- 管理員介面 -->
     <div id="admin-view" class="hidden w-full max-w-4xl px-6 py-10">
         <div class="bg-white p-8 rounded-3xl shadow-xl mb-10 border-2 border-pink-50">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 font-serif tracking-tight">1. 設定新人基底照 (AI 背景)</h2>
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 font-serif">1. 設定新人基底照</h2>
+                <button id="test-api-btn" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">🔍 測試 API 連線</button>
+            </div>
             <div class="flex flex-col md:flex-row items-center gap-8">
                 <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center">
                     <span class="text-gray-400 text-sm font-serif">尚未設定</span>
                 </div>
                 <div class="flex-1 space-y-4">
-                    <input type="file" id="base-input" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
-                    <button id="save-base-btn" class="hidden w-full py-4 bg-pink-500 text-white rounded-full font-bold shadow-lg hover:bg-pink-600 transition-colors">確認儲存並發佈</button>
+                    <input type="file" id="base-input" accept="image/*" class="block w-full text-sm">
+                    <button id="save-base-btn" class="hidden w-full py-4 bg-pink-500 text-white rounded-full font-bold shadow-lg">確認儲存並發佈</button>
                 </div>
             </div>
-        </div>
-        <div class="flex justify-between items-end mb-6">
-            <h2 class="text-2xl font-bold text-red-600 font-serif">2. 照片審核</h2>
-            <p id="photo-count" class="text-gray-400 text-sm font-serif"></p>
         </div>
         <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
     </div>
@@ -88,13 +86,10 @@
     <!-- 大螢幕播放 -->
     <div id="dashboard-view" class="hidden fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center"></div>
-        <div class="absolute bottom-12 left-12 bg-black/40 backdrop-blur-3xl p-10 rounded-3xl border border-white/10 text-white font-serif shadow-2xl">
-            <p class="text-4xl font-bold mb-3 tracking-wider">掃碼分享您的感動</p>
-            <p class="text-white/30 text-2xl italic tracking-widest uppercase">Wedding AI Magic</p>
-        </div>
     </div>
 
     <script type="module">
+        // --- 核心配置 ---
         const apiKey = "AIzaSyCT_60qZ5Ccewo-wP3BmyXtNcOYnsNHtV0"; 
 
         const firebaseConfig = {
@@ -125,21 +120,20 @@
             else showGuest();
         });
 
-        // --- 優化後的 AI 融合核心 (兩階段：理解照片 + 生成照片) ---
+        // --- AI 融合邏輯 (修正模型路徑) ---
         async function runAI(guestB64) {
             const statusText = document.getElementById('ai-status-text');
             
-            // 1. 取得新人基底照
             const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
-            if (!snap.exists()) throw new Error("尚未設定新人基底影，請聯繫管理員。");
+            if (!snap.exists()) throw new Error("請先在後台設定新人基底照。");
             const coupleB64 = snap.data().imageUrl.split(',')[1];
 
-            // 階段一：理解照片內容並生成融合提示 (使用 2.5 Flash Preview)
-            statusText.innerText = "正在分析人像特徵...";
+            // 階段一：分析人像 (使用 gemini-2.5-flash-preview-09-2025)
+            statusText.innerText = "正在分析人像...";
             const analysisPayload = {
                 contents: [{
                     parts: [
-                        { text: "這是一張婚禮現場照（圖一）和一位賓客的自拍照（圖二）。請詳細描述一個場景，將圖二中的人自然地放入圖一的場景中。描述應包含：賓客站位（在新郎新娘旁邊）、穿著細節、婚禮場景背景、光影一致性。描述請用英文，字數約 100 字。" },
+                        { text: "This is a wedding photo(Image 1) and a guest selfie(Image 2). Describe a prompt for an image generator to blend the guest into the wedding scene, standing beside the couple naturally. In English." },
                         { inlineData: { mimeType: "image/jpeg", data: coupleB64 } },
                         { inlineData: { mimeType: "image/jpeg", data: guestB64.split(',')[1] } }
                     ]
@@ -152,14 +146,14 @@
                 body: JSON.stringify(analysisPayload)
             });
 
-            if (!analysisRes.ok) throw new Error("AI 分析失敗，請重試。");
+            if (!analysisRes.ok) throw new Error("AI 分析失敗，請檢查 Key 權限。");
             const analysisData = await analysisRes.json();
-            const promptDescription = analysisData.candidates[0].content.parts[0].text;
+            const prompt = analysisData.candidates[0].content.parts[0].text;
 
-            // 階段二：根據描述生成圖像 (使用 Imagen 4.0)
-            statusText.innerText = "正在生成魔法合照...";
+            // 階段二：圖像生成 (使用 imagen-4.0-generate-001)
+            statusText.innerText = "魔法施放中...";
             const genPayload = {
-                instances: { prompt: promptDescription },
+                instances: { prompt: prompt },
                 parameters: { sampleCount: 1 }
             };
 
@@ -169,11 +163,10 @@
                 body: JSON.stringify(genPayload)
             });
 
-            if (!genRes.ok) throw new Error("AI 生成失敗，請檢查 Key 權限。");
+            if (!genRes.ok) throw new Error("AI 生成失敗，Imagen 權限尚未開啟或超額。");
             const genData = await genRes.json();
-            const genB64 = genData.predictions[0].bytesBase64Encoded;
-
-            return `data:image/png;base64,${genB64}`;
+            
+            return `data:image/png;base64,${genData.predictions[0].bytesBase64Encoded}`;
         }
 
         // --- 賓客功能 ---
@@ -183,44 +176,35 @@
             const container = document.getElementById('star-container');
 
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
-                const photos = s.docs
-                    .map(d => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => b.timestamp - a.timestamp)
-                    .slice(0, 15);
+                const photos = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a,b)=>b.timestamp-a.timestamp).slice(0,12);
                 const ids = Array.from(container.querySelectorAll('img')).map(i => i.dataset.id);
                 photos.forEach(p => {
                     if (!ids.includes(p.id)) {
                         const img = document.createElement('img');
                         img.src = p.imageUrl; img.dataset.id = p.id; img.className = 'floating-photo';
-                        const sz = Math.random() * 40 + 75;
-                        img.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*80+5}%;top:${Math.random()*60+20}%;opacity:0;animation-delay:-${Math.random()*12}s`;
+                        const sz = Math.random()*50+80;
+                        img.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*80+5}%;top:${Math.random()*60+20}%;opacity:0;animation-delay:-${Math.random()*10}s`;
                         container.appendChild(img);
-                        setTimeout(() => img.style.opacity = '1', 100);
+                        setTimeout(() => img.style.opacity='1', 100);
                     }
                 });
             });
 
             const upload = async (file, ai) => {
-                if (!file || !auth.currentUser) return;
+                if (!file) return;
                 if (ai) document.getElementById('ai-processing').classList.remove('hidden');
-                status.innerText = ai ? "✨ AI 魔法製作中..." : "💖 正在傳送祝福...";
-                
+                status.innerText = ai ? "✨ AI 正在製作合體照..." : "💖 傳送成功！";
                 try {
                     let b64 = await resizeImage(file, 800);
                     if (ai) b64 = await runAI(b64);
-                    
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
-                        imageUrl: b64,
-                        timestamp: Date.now(),
-                        type: ai ? 'ai' : 'normal'
+                        imageUrl: b64, timestamp: Date.now(), type: ai ? 'ai' : 'normal'
                     });
-                    status.innerText = "成功傳送！請看大螢幕 ❤️";
                 } catch (e) {
-                    alert("操作失敗：" + e.message);
-                    status.innerText = "失敗，請洽工作人員";
+                    alert("錯誤：" + e.message);
                 } finally {
                     document.getElementById('ai-processing').classList.add('hidden');
-                    setTimeout(() => status.innerText = "", 4000);
+                    status.innerText = "";
                 }
             };
 
@@ -228,53 +212,61 @@
             document.getElementById('ai-photo-input').onchange = (e) => upload(e.target.files[0], true);
         }
 
-        // --- 管理後台 ---
+        // --- 管理員 ---
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const input = document.getElementById('base-input'), btn = document.getElementById('save-base-btn'), preview = document.getElementById('base-preview');
+            const testBtn = document.getElementById('test-api-btn');
             let pending = null;
+
+            // API 測試按鈕邏輯
+            testBtn.onclick = async () => {
+                testBtn.innerText = "⌛ 正在連線...";
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contents: [{ parts: [{ text: "Say Hello" }] }] })
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        alert("✅ API 連線成功！\n回應內容：" + data.candidates[0].content.parts[0].text);
+                    } else {
+                        const err = await res.json();
+                        alert("❌ API 失敗\n錯誤代碼：" + res.status + "\n詳細：" + err.error.message);
+                    }
+                } catch (e) {
+                    alert("❌ 網路連線出錯：" + e.message);
+                } finally {
+                    testBtn.innerText = "🔍 測試 API 連線";
+                }
+            };
 
             getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto')).then(s => {
                 if (s.exists()) preview.innerHTML = `<img src="${s.data().imageUrl}" class="w-full h-full object-cover">`;
             });
 
             input.onchange = async (e) => {
-                if (!e.target.files[0]) return;
                 pending = await resizeImage(e.target.files[0], 800);
                 preview.innerHTML = `<img src="${pending}" class="w-full h-full object-cover opacity-50">`;
                 btn.classList.remove('hidden');
             };
 
             btn.onclick = async () => {
-                btn.disabled = true; btn.innerText = "儲存中...";
-                try {
-                    await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pending });
-                    preview.querySelector('img').classList.remove('opacity-50');
-                    alert("基底照設定成功！");
-                    btn.classList.add('hidden');
-                } catch (e) { 
-                    alert("儲存失敗：請確認 Firebase Rules 是否為全開模式。"); 
-                } finally { 
-                    btn.disabled = false; btn.innerText = "確認儲存並發佈"; 
-                }
+                await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pending });
+                alert("基底照設定完成！");
+                btn.classList.add('hidden');
             };
 
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
-                const photos = s.docs
-                    .map(d => ({ id: d.id, ...d.data() }))
-                    .sort((a, b) => b.timestamp - a.timestamp);
                 const gal = document.getElementById('admin-gallery'); gal.innerHTML = '';
-                document.getElementById('photo-count').innerText = `目前共有 ${photos.length} 張照片`;
-                photos.forEach(p => {
+                s.docs.forEach(d => {
                     const div = document.createElement('div'); div.className = 'relative group';
-                    div.innerHTML = `
-                        <img src="${p.imageUrl}" class="w-full h-40 object-cover rounded-2xl shadow border ${p.type==='ai'?'border-purple-500 border-2':''}">
-                        <button class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onclick="window.del('${p.id}')">刪除</button>
-                    `;
+                    div.innerHTML = `<img src="${d.data().imageUrl}" class="w-full h-32 object-cover rounded-xl shadow-md"><button class="absolute top-1 right-1 bg-red-500 text-white text-[10px] px-2 py-1 rounded-full opacity-0 group-hover:opacity-100" onclick="window.del('${d.id}')">刪除</button>`;
                     gal.appendChild(div);
                 });
             });
-            window.del = (id) => { if(confirm('確定刪除？')) deleteDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'photos', id)); };
+            window.del = (id) => { if(confirm('刪除？')) deleteDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'photos', id)); };
         }
 
         // --- 大螢幕播放 ---
@@ -283,8 +275,7 @@
             const cont = document.getElementById('slideshow-container');
             let all = [], queue = [], playing = false;
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
-                const current = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => b.timestamp - a.timestamp);
-                all = current;
+                all = s.docs.map(d => ({ imageUrl: d.data().imageUrl, type: d.data().type }));
                 s.docChanges().forEach(c => { if (c.type === "added") queue.push(c.doc.data()); });
                 if (!playing && all.length > 0) loop();
             });
@@ -299,10 +290,10 @@
                             <img src="${next.imageUrl}" class="max-w-full max-h-[70vh] object-contain">
                         </div>`;
                         if (cont.children.length > 0) {
-                            const old = cont.children[0]; old.style.transition = "all 1.5s"; old.style.opacity = "0";
-                            setTimeout(() => old.remove(), 1500);
+                            const old = cont.children[0]; old.style.transition = "all 1s"; old.style.opacity = "0";
+                            setTimeout(() => old.remove(), 1000);
                         }
-                        cont.appendChild(frame); await new Promise(r => setTimeout(r, 7000));
+                        cont.appendChild(frame); await new Promise(r => setTimeout(r, 6000));
                         idx = (idx + 1) % all.length;
                     } else await new Promise(r => setTimeout(r, 1000));
                 }
@@ -320,7 +311,7 @@
                         if (w > max || h > max) { if (w > h) { h *= max/w; w = max; } else { w *= max/h; h = max; } }
                         c.width = w; c.height = h;
                         c.getContext('2d').drawImage(i, 0, 0, w, h);
-                        res(c.toDataURL('image/jpeg', 0.5));
+                        res(c.toDataURL('image/jpeg', 0.6));
                     };
                 };
             });
