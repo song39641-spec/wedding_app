@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wedding Moments - 婚禮相片分享</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -11,6 +11,29 @@
         body {
             font-family: 'Noto Serif TC', serif;
             background-color: #fdfaf6;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
+        }
+
+        /* 針對 iOS 的按鈕優化 */
+        .upload-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        #photo-input {
+            position: absolute;
+            font-size: 100px;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
         }
 
         /* 輪播動畫 */
@@ -23,48 +46,62 @@
             to { transform: translateY(0) rotate(1deg); opacity: 1; }
         }
 
-        .gradient-bg {
-            background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%);
-        }
-
         .photo-card {
             box-shadow: 0 20px 50px rgba(0,0,0,0.3);
-            border: 15px solid white;
-            border-bottom: 60px solid white;
+            border: 12px solid white;
+            border-bottom: 45px solid white;
+        }
+
+        .guest-grid-item {
+            aspect-ratio: 1/1;
+            object-fit: cover;
+            border-radius: 8px;
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center overflow-x-hidden">
+<body class="min-h-screen flex flex-col items-center overflow-x-hidden">
 
     <!-- 載入中遮罩 -->
-    <div id="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-white">
-        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500"></div>
+    <div id="loading" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white">
+        <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-500 mb-4"></div>
+        <p class="text-gray-500">正在準備浪漫空間...</p>
     </div>
 
     <!-- 賓客上傳模式 (Guest Mode) -->
-    <div id="guest-view" class="hidden w-full max-w-md px-6 text-center">
-        <header class="mb-12">
+    <div id="guest-view" class="hidden w-full max-w-md px-6 py-10 flex flex-col items-center">
+        <header class="mb-8 text-center">
             <h1 class="text-3xl font-bold text-gray-800 mb-2 font-serif">Wedding Moments</h1>
             <p class="text-gray-500 italic">分享您眼中的幸福瞬間</p>
         </header>
 
-        <div class="relative group">
-            <!-- 移除 capture 屬性以支援相簿上傳 -->
-            <input type="file" id="photo-input" accept="image/*" class="hidden">
-            <button onclick="document.getElementById('photo-input').click()" 
-                class="w-64 h-64 rounded-full gradient-bg shadow-2xl flex flex-col items-center justify-center transition-transform active:scale-95 hover:scale-105 mx-auto border-8 border-white">
+        <!-- 上傳大按鈕區 -->
+        <div class="upload-wrapper mb-10">
+            <div class="w-60 h-60 rounded-full gradient-bg shadow-2xl flex flex-col items-center justify-center border-8 border-white transition-transform active:scale-95">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-white mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
-                <span class="text-white text-xl font-bold tracking-widest font-serif">傳送祝福照片</span>
-            </button>
+                <span class="text-white text-xl font-bold tracking-widest font-serif">上傳照片</span>
+            </div>
+            <!-- 將 input 置於最上層並透明，確保 iOS 觸發選單 -->
+            <input type="file" id="photo-input" accept="image/jpeg,image/png,image/gif,image/*" title="上傳照片">
         </div>
 
-        <div id="status-msg" class="mt-8 text-sm font-medium text-pink-600 h-6"></div>
+        <div id="status-msg" class="mb-8 text-sm font-medium text-pink-600 h-6 text-center"></div>
+
+        <!-- 賓客即時牆：回答「大家上傳的要怎麼秀」 -->
+        <div class="w-full border-t border-gray-200 pt-8">
+            <h2 class="text-lg font-bold text-gray-700 mb-4 flex items-center gap-2">
+                <span class="w-2 h-2 bg-pink-400 rounded-full animate-ping"></span>
+                即時祝福牆
+            </h2>
+            <div id="guest-gallery" class="grid grid-cols-3 gap-2">
+                <!-- 照片會動態出現在這裡 -->
+            </div>
+        </div>
         
-        <footer class="mt-20 text-xs text-gray-400">
-            點擊上方按鈕，可拍照或選擇手機相簿照片
+        <footer class="mt-12 text-xs text-gray-400 text-center">
+            如果您無法選擇相簿，請點擊右上角「...」使用瀏覽器開啟
         </footer>
     </div>
 
@@ -74,14 +111,11 @@
             <div id="empty-state" class="text-white text-2xl animate-pulse font-serif">
                 等待照片上傳中...
             </div>
-            <!-- 照片將動態插入此處 -->
         </div>
-        
-        <!-- 左下角提示區 -->
         <div class="absolute bottom-10 left-10 bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 shadow-2xl flex items-center gap-4">
             <div class="text-left">
                 <p class="text-white font-bold text-2xl mb-1">掃碼分享您的照片</p>
-                <p class="text-white/60 text-lg italic">讓我們一起記錄這完美的時刻</p>
+                <p class="text-white/60 text-lg italic font-serif">Forever & Always</p>
             </div>
         </div>
     </div>
@@ -99,14 +133,13 @@
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
         const weddingId = 'wedding-app'; 
 
-        let currentUser = null;
         const urlParams = new URLSearchParams(window.location.search);
         const isDashboard = urlParams.get('mode') === 'dashboard';
 
@@ -114,7 +147,6 @@
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                currentUser = user;
                 document.getElementById('loading').classList.add('hidden');
                 if (isDashboard) {
                     showDashboard();
@@ -129,25 +161,38 @@
             document.getElementById('guest-view').classList.remove('hidden');
             const input = document.getElementById('photo-input');
             const status = document.getElementById('status-msg');
+            const gallery = document.getElementById('guest-gallery');
+
+            // 監聽所有人的照片，顯示在下方牆上
+            const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(12));
+            onSnapshot(q, (snapshot) => {
+                gallery.innerHTML = '';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const img = document.createElement('img');
+                    img.src = data.imageUrl;
+                    img.className = 'guest-grid-item fade-in';
+                    gallery.appendChild(img);
+                });
+            });
 
             input.onchange = async (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
 
-                status.innerText = "正在傳送照片中...";
+                status.innerText = "❤️ 正在傳送祝福...";
                 
                 try {
                     const base64 = await resizeAndConvert(file);
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: base64,
-                        timestamp: Date.now(),
-                        userId: currentUser.uid
+                        timestamp: Date.now()
                     });
-                    status.innerText = "上傳成功！感謝您的參與 ❤️";
+                    status.innerText = "✅ 傳送成功！感謝您的分享";
                     input.value = "";
                     setTimeout(() => status.innerText = "", 3000);
                 } catch (err) {
-                    status.innerText = "系統忙碌中，請稍後再試";
+                    status.innerText = "❌ 傳送失敗，請換張照片試試";
                     console.error(err);
                 }
             };
@@ -159,54 +204,36 @@
             const container = document.getElementById('slideshow-container');
             const emptyState = document.getElementById('empty-state');
             
-            let allPhotos = []; // 存儲所有歷史照片
-            let photoQueue = []; // 即時插播隊列
+            let allPhotos = [];
+            let photoQueue = [];
             let isPlaying = false;
 
-            // 1. 抓取已有的歷史照片
-            const historySnap = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
-            historySnap.forEach(doc => {
-                allPhotos.push(doc.data().imageUrl);
-            });
-
-            // 2. 即時監聽新照片
-            const q = collection(db, 'artifacts', weddingId, 'public', 'data', 'photos');
+            // 監聽新照片與歷史照片
+            const q = query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'));
             onSnapshot(q, (snapshot) => {
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const data = change.doc.data();
-                        // 檢查是否為新上傳 (非歷史照片)
+                        photoQueue.push(data.imageUrl);
                         if (!allPhotos.includes(data.imageUrl)) {
-                            photoQueue.push(data.imageUrl);
-                            allPhotos.push(data.imageUrl); // 加入歷史庫
+                            allPhotos.push(data.imageUrl);
                         }
-                        if (!isPlaying && (allPhotos.length > 0)) startLoop();
+                        if (!isPlaying && allPhotos.length > 0) startLoop();
                     }
                 });
             });
 
-            // 循環播放邏輯
             async function startLoop() {
                 if (isPlaying) return;
                 isPlaying = true;
                 emptyState.classList.add('hidden');
 
                 let historyIndex = 0;
-
                 while (true) {
-                    let nextImg = "";
-
-                    // 優先權：如果有「新照片」在隊列，先播新照片
-                    if (photoQueue.length > 0) {
-                        nextImg = photoQueue.shift();
-                    } else if (allPhotos.length > 0) {
-                        // 否則，循環播放歷史照片
-                        nextImg = allPhotos[historyIndex];
-                        historyIndex = (historyIndex + 1) % allPhotos.length;
-                    }
-
+                    let nextImg = photoQueue.length > 0 ? photoQueue.shift() : allPhotos[historyIndex];
                     if (nextImg) {
                         await displayImage(nextImg);
+                        historyIndex = (historyIndex + 1) % allPhotos.length;
                     } else {
                         await new Promise(r => setTimeout(r, 2000));
                     }
@@ -218,15 +245,14 @@
                     const imgFrame = document.createElement('div');
                     imgFrame.className = "absolute inset-0 flex items-center justify-center p-12 slide-up";
                     imgFrame.innerHTML = `
-                        <div class="photo-card relative bg-white p-6 transform">
-                            <img src="${url}" class="max-w-full max-h-[70vh] object-contain">
-                            <div class="mt-8 text-center text-gray-500 font-serif text-3xl tracking-widest italic">
+                        <div class="photo-card relative bg-white p-5 transform">
+                            <img src="${url}" class="max-w-full max-h-[75vh] object-contain">
+                            <div class="mt-10 text-center text-gray-500 font-serif text-4xl tracking-widest italic">
                                 Forever & Always
                             </div>
                         </div>
                     `;
                     
-                    // 移除上一張
                     if (container.children.length > 1) {
                         const old = Array.from(container.children).find(el => el !== emptyState && el !== imgFrame);
                         if (old) {
@@ -236,32 +262,26 @@
                             setTimeout(() => old.remove(), 1500);
                         }
                     }
-
                     container.appendChild(imgFrame);
-                    setTimeout(resolve, 5000); // 每張展示 5 秒
+                    setTimeout(resolve, 6000);
                 });
             }
         }
 
-        // 圖片壓縮
         function resizeAndConvert(file) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-                reader.onload = (event) => {
+                reader.onload = (e) => {
                     const img = new Image();
-                    img.src = event.target.result;
+                    img.src = e.target.result;
                     img.onload = () => {
                         const canvas = document.createElement('canvas');
                         let width = img.width;
                         let height = img.height;
-                        const MAX_WIDTH = 1000; // 提升一點畫質
-                        if (width > MAX_WIDTH) {
-                            height *= MAX_WIDTH / width;
-                            width = MAX_WIDTH;
-                        }
-                        canvas.width = width;
-                        canvas.height = height;
+                        const MAX = 900;
+                        if (width > MAX) { height *= MAX / width; width = MAX; }
+                        canvas.width = width; canvas.height = height;
                         const ctx = canvas.getContext('2d');
                         ctx.drawImage(img, 0, 0, width, height);
                         resolve(canvas.toDataURL('image/jpeg', 0.8));
