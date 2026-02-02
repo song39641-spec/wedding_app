@@ -29,33 +29,28 @@
 </head>
 <body class="min-h-screen flex flex-col items-center">
 
-    <!-- 全域載入中 -->
     <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-pink-500 mb-4"></div>
         <p class="text-gray-400 text-sm">正在載入幸福時刻...</p>
     </div>
 
-    <!-- AI 處理中遮罩 -->
     <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
         <div class="animate-bounce mb-6"><div class="w-16 h-16 rounded-full ai-gradient-bg shadow-2xl"></div></div>
         <h2 class="text-white text-xl font-bold mb-2">AI 魔法融合中...</h2>
         <p class="text-white/60 text-sm">正在為您與新人打造專屬合照</p>
     </div>
 
-    <!-- 賓客介面 -->
     <div id="guest-view" class="hidden w-full max-w-md px-6 py-10">
         <header class="text-center mb-10">
             <h1 class="text-3xl font-bold text-gray-800 font-serif">Wedding Moments</h1>
-            <p class="text-pink-400 text-xs font-bold tracking-widest mt-1">AI MAGIC STUDIO</p>
+            <p class="text-pink-400 text-xs font-bold tracking-widest mt-1 uppercase">AI Magic Studio</p>
         </header>
 
         <div class="space-y-5 mb-10">
-            <!-- 一般上傳 -->
             <div class="relative h-24 rounded-[2rem] gradient-bg border-4 border-white shadow-lg flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
                 <span class="text-white font-bold text-lg">一般分享照片</span>
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
-            <!-- AI 融合上傳 -->
             <div class="relative h-24 rounded-[2rem] ai-gradient-bg border-4 border-white shadow-lg flex items-center justify-center active:scale-95 transition-transform overflow-hidden">
                 <div class="text-center">
                     <span class="text-white font-bold text-lg block">AI 幻影合照</span>
@@ -67,9 +62,8 @@
 
         <div id="status-msg" class="text-center text-sm font-medium text-pink-600 mb-6 h-4 italic"></div>
 
-        <!-- 漂浮星空牆 -->
         <div id="star-container" class="rounded-[2.5rem] shadow-inner">
-            <div class="absolute top-4 left-6 text-[10px] text-gray-300 font-bold tracking-widest">STARRY MOMENTS</div>
+            <div class="absolute top-4 left-6 text-[10px] text-gray-300 font-bold tracking-widest uppercase">Starry Moments</div>
         </div>
         
         <footer class="mt-8 text-center text-[10px] text-gray-300 uppercase tracking-widest">
@@ -77,24 +71,19 @@
         </footer>
     </div>
 
-    <!-- 管理員介面 -->
     <div id="admin-view" class="hidden w-full max-w-4xl px-6 py-10">
         <div class="bg-white p-8 rounded-3xl shadow-xl mb-10 border border-pink-50">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6 font-serif tracking-tight">1. 設定新人基底照 (AI 參考背景)</h2>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 font-serif">1. 設定新人基底照 (AI 融合背景)</h2>
             <div class="flex flex-col md:flex-row items-center gap-8">
-                <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center shadow-inner">
+                <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center">
                     <span class="text-gray-400 text-sm">尚未設定</span>
                 </div>
                 <div class="flex-1 space-y-4">
                     <input type="file" id="base-input" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100">
-                    <div class="p-4 bg-blue-50 rounded-xl text-blue-700 text-xs leading-relaxed">
-                        提示：請上傳解析度約 800px 的橫式婚紗照。此照片將作為 AI 融合所有賓客自拍的背景。
-                    </div>
                     <button id="save-base-btn" class="hidden w-full py-4 bg-pink-500 text-white rounded-full font-bold shadow-lg hover:bg-pink-600 transition-colors">確認儲存並發佈</button>
                 </div>
             </div>
         </div>
-        
         <div class="flex justify-between items-end mb-6 px-2">
             <h2 class="text-2xl font-bold text-red-600 font-serif">2. 照片審核與管理</h2>
             <p id="photo-count" class="text-gray-400 text-sm"></p>
@@ -102,7 +91,6 @@
         <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-6"></div>
     </div>
 
-    <!-- 大螢幕播放模式 -->
     <div id="dashboard-view" class="hidden fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div id="slideshow-container" class="relative w-full h-full flex items-center justify-center"></div>
         <div class="absolute bottom-12 left-12 bg-black/40 backdrop-blur-3xl p-10 rounded-3xl border border-white/10 text-white font-serif shadow-2xl">
@@ -112,7 +100,6 @@
     </div>
 
     <script type="module">
-        // Google AI Studio API Key
         const apiKey = "AIzaSyCT_60qZ5Ccewo-wP3BmyXtNcOYnsNHtV0"; 
 
         const firebaseConfig = {
@@ -126,7 +113,7 @@
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, limit, doc, deleteDoc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -135,13 +122,8 @@
 
         const mode = new URLSearchParams(window.location.search).get('mode');
 
-        // 初始化身份驗證 (Rule 3)
         const initAuth = async () => {
-            try { 
-                await signInAnonymously(auth); 
-            } catch (e) { 
-                console.error("Firebase 認證失敗，請檢查網域授權：", e.message); 
-            }
+            try { await signInAnonymously(auth); } catch (e) { console.error("Firebase 認證失敗：", e.message); }
         };
         initAuth();
 
@@ -154,21 +136,17 @@
             }
         });
 
-        // --- AI 融合邏輯 ---
         async function runAI(guestB64) {
-            // 從 public/data 路徑讀取基底照 (符合 Rule 1)
+            // 使用規定路徑
             const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
             if (!snap.exists()) throw new Error("請管理員先上傳基底照！");
             
-            const coupleB64 = snap.data().imageUrl.split(',')[1];
-            const guestData = guestB64.split(',')[1];
-
             const payload = {
                 contents: [{
                     parts: [
-                        { text: "Seamlessly blend the person from Image 2 into the wedding scene of Image 1 as a friend standing next to the couple. Ensure a natural look with consistent lighting." },
-                        { inlineData: { mimeType: "image/jpeg", data: coupleB64 } },
-                        { inlineData: { mimeType: "image/jpeg", data: guestData } }
+                        { text: "Seamlessly blend the person from Image 2 into the wedding scene of Image 1 as a friend standing next to the couple." },
+                        { inlineData: { mimeType: "image/jpeg", data: snap.data().imageUrl.split(',')[1] } },
+                        { inlineData: { mimeType: "image/jpeg", data: guestB64.split(',')[1] } }
                     ]
                 }],
                 generationConfig: { responseModalities: ['IMAGE'] }
@@ -180,44 +158,47 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!res.ok) throw new Error("AI 服務暫時忙碌，請重試");
+            if (!res.ok) throw new Error("AI 服務忙碌中");
             const data = await res.json();
             const gen = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
-            if (!gen) throw new Error("AI 無法生成圖片，請換張照片試試");
+            if (!gen) throw new Error("AI 魔法失敗");
             return `data:image/png;base64,${gen}`;
         }
 
-        // --- 賓客介面邏輯 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const container = document.getElementById('star-container');
             const status = document.getElementById('status-msg');
 
-            // 實時監聽照片牆
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(15)), (s) => {
+            // 遵守規則：使用簡單 collection 查詢，並在 JS 中排序
+            onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
+                const photos = s.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => b.timestamp - a.timestamp)
+                    .slice(0, 15);
+
                 const existingIds = Array.from(container.querySelectorAll('img')).map(i => i.dataset.id);
-                s.docs.forEach(d => {
-                    if (!existingIds.includes(d.id)) {
+                photos.forEach(p => {
+                    if (!existingIds.includes(p.id)) {
                         const img = document.createElement('img');
-                        img.src = d.data().imageUrl; img.dataset.id = d.id; img.className = 'floating-photo';
+                        img.src = p.imageUrl; img.dataset.id = p.id; img.className = 'floating-photo';
                         const sz = Math.random() * 40 + 75;
                         img.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*80+5}%;top:${Math.random()*60+20}%;opacity:0;animation-delay:-${Math.random()*12}s`;
                         container.appendChild(img);
                         setTimeout(() => img.style.opacity = '1', 100);
                     }
                 });
-            });
+            }, (err) => { if(err.code === 'permission-denied') alert('傳送失敗：請檢查 Firebase Rules'); });
 
             const handleUpload = async (file, isAI) => {
-                if (!file) return;
+                if (!file || !auth.currentUser) return;
                 if (isAI) document.getElementById('ai-processing').classList.remove('hidden');
-                status.innerText = isAI ? "✨ AI 正在施展魔法..." : "💖 正在傳送祝福...";
+                status.innerText = isAI ? "✨ AI 魔法製作中..." : "💖 正在傳送祝福...";
                 
                 try {
                     let b64 = await resizeImage(file, 800);
                     if (isAI) b64 = await runAI(b64);
                     
-                    // 寫入 Firestore (Rule 1)
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64,
                         timestamp: Date.now(),
@@ -225,7 +206,7 @@
                     });
                     status.innerText = "成功傳送！請看大螢幕 ❤️";
                 } catch (e) {
-                    status.innerText = "傳送失敗，請重試";
+                    status.innerText = "傳送失敗，請確認 Firebase Rules";
                     console.error(e);
                 } finally {
                     document.getElementById('ai-processing').classList.add('hidden');
@@ -237,13 +218,11 @@
             document.getElementById('ai-photo-input').onchange = (e) => handleUpload(e.target.files[0], true);
         }
 
-        // --- 管理後台邏輯 ---
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const input = document.getElementById('base-input'), btn = document.getElementById('save-base-btn'), preview = document.getElementById('base-preview');
             let pendingBase64 = null;
 
-            // 讀取目前的基底照
             getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto')).then(s => {
                 if (s.exists()) preview.innerHTML = `<img src="${s.data().imageUrl}" class="w-full h-full object-cover">`;
             });
@@ -256,28 +235,29 @@
             };
 
             btn.onclick = async () => {
+                if (!auth.currentUser) return;
                 btn.disabled = true; btn.innerText = "儲存中...";
                 try {
                     await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pendingBase64 });
                     preview.querySelector('img').classList.remove('opacity-50');
                     alert("基底照設定成功！");
                     btn.classList.add('hidden');
-                } catch (e) { 
-                    alert("儲存失敗：請確認 Firebase 安全規則已設為允許讀寫。"); 
-                } finally { 
-                    btn.disabled = false; btn.innerText = "確認儲存並發佈"; 
-                }
+                } catch (e) { alert("儲存失敗：請確認 Firebase 安全規則。"); }
+                finally { btn.disabled = false; btn.innerText = "確認儲存並發佈"; }
             };
 
-            // 管理員照片牆監聽 (Rule 2: 無過度複雜查詢)
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc')), (s) => {
+            onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
+                const photos = s.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => b.timestamp - a.timestamp);
+
                 const gal = document.getElementById('admin-gallery'); gal.innerHTML = '';
-                document.getElementById('photo-count').innerText = `總共收到 ${s.size} 張照片`;
-                s.forEach(d => {
+                document.getElementById('photo-count').innerText = `總共收到 ${photos.length} 張照片`;
+                photos.forEach(p => {
                     const div = document.createElement('div'); div.className = 'relative group';
                     div.innerHTML = `
-                        <img src="${d.data().imageUrl}" class="w-full h-40 object-cover rounded-2xl shadow-md border ${d.data().type==='ai'?'border-purple-500 border-2':''}">
-                        <button class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onclick="window.del('${d.id}')">刪除</button>
+                        <img src="${p.imageUrl}" class="w-full h-40 object-cover rounded-2xl shadow-md border ${p.type==='ai'?'border-purple-500 border-2':''}">
+                        <button class="absolute top-2 right-2 bg-red-500 text-white text-[10px] px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity" onclick="window.del('${p.id}')">刪除</button>
                     `;
                     gal.appendChild(div);
                 });
@@ -285,16 +265,22 @@
             window.del = (id) => { if(confirm('確定要刪除這張照片嗎？')) deleteDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'photos', id)); };
         }
 
-        // --- 大螢幕播放邏輯 ---
         function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const cont = document.getElementById('slideshow-container');
             let allPhotos = [], queue = [], isPlaying = false;
 
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc')), (s) => {
-                allPhotos = s.docs.map(d => ({ url: d.data().imageUrl, type: d.data().type }));
+            onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
+                const currentPhotos = s.docs
+                    .map(d => ({ id: d.id, ...d.data() }))
+                    .sort((a, b) => b.timestamp - a.timestamp);
+                
+                allPhotos = currentPhotos;
                 s.docChanges().forEach(c => { 
-                    if (c.type === "added") queue.push({ url: c.doc.data().imageUrl, type: c.doc.data().type }); 
+                    if (c.type === "added") {
+                        const data = c.doc.data();
+                        queue.push({ url: data.imageUrl, type: data.type }); 
+                    }
                 });
                 if (!isPlaying && allPhotos.length > 0) playLoop();
             });
@@ -304,11 +290,12 @@
                 while (true) {
                     let next = queue.length > 0 ? queue.shift() : allPhotos[idx];
                     if (next) {
+                        const url = next.url || next.imageUrl;
                         const frame = document.createElement('div'); frame.className = "absolute inset-0 flex items-center justify-center p-20 slide-up";
                         frame.innerHTML = `
                             <div class="photo-card bg-white p-6 relative">
-                                ${next.type==='ai'?'<div class="absolute -top-12 -right-12 bg-purple-600 text-white px-8 py-3 rounded-full font-bold shadow-2xl text-xl animate-bounce">AI 魔法合照</div>':''}
-                                <img src="${next.url}" class="max-w-full max-h-[70vh] object-contain">
+                                ${next.type==='ai'?'<div class="absolute -top-12 -right-12 bg-purple-600 text-white px-8 py-3 rounded-full font-bold shadow-2xl text-xl animate-bounce uppercase">AI Magic</div>':''}
+                                <img src="${url}" class="max-w-full max-h-[70vh] object-contain">
                             </div>`;
                         if (cont.children.length > 0) {
                             const old = cont.children[0]; old.style.transition = "all 1.5s"; old.style.opacity = "0"; old.style.transform = "scale(0.8) translateY(-100px)";
@@ -322,7 +309,6 @@
             }
         }
 
-        // --- 圖片處理工具 ---
         function resizeImage(file, max = 800) {
             return new Promise((res) => {
                 const r = new FileReader(); r.readAsDataURL(file);
@@ -334,7 +320,7 @@
                         if (w > max || h > max) { if (w > h) { h *= max/w; w = max; } else { w *= max/h; h = max; } }
                         c.width = w; c.height = h;
                         c.getContext('2d').drawImage(i, 0, 0, w, h);
-                        res(c.toDataURL('image/jpeg', 0.6));
+                        res(c.toDataURL('image/jpeg', 0.5));
                     };
                 };
             });
