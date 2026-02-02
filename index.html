@@ -31,11 +31,11 @@
         <p class="text-gray-400 text-sm font-serif">載入中，請稍候...</p>
     </div>
 
-    <!-- AI 處理中遮罩 -->
-    <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md">
+    <!-- AI 處理中 -->
+    <div id="ai-processing" class="hidden fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md text-center px-6">
         <div class="animate-bounce mb-6"><div class="w-16 h-16 rounded-full ai-gradient-bg shadow-2xl"></div></div>
         <h2 id="ai-status-text" class="text-white text-xl font-bold mb-2 font-serif">AI 魔法融合中...</h2>
-        <p id="ai-sub-text" class="text-white/60 text-sm text-center px-6">正在製作您與新人的專屬合照</p>
+        <p id="ai-sub-text" class="text-white/60 text-sm">正在製作您與新人的專屬合照，請勿關閉視窗</p>
     </div>
 
     <!-- 賓客介面 -->
@@ -68,11 +68,11 @@
         <div class="bg-white p-8 rounded-3xl shadow-xl mb-10 border-2 border-pink-50">
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800 font-serif">1. 設定新人基底照</h2>
-                <button id="test-api-btn" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors">🔍 測試 API 連線</button>
+                <button id="test-api-btn" class="px-4 py-2 bg-gray-100 text-gray-600 rounded-full text-xs font-bold">🔍 測試 API 連線</button>
             </div>
             <div class="flex flex-col md:flex-row items-center gap-8">
-                <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center">
-                    <span class="text-gray-400 text-sm font-serif">尚未設定</span>
+                <div id="base-preview" class="w-56 h-56 bg-gray-50 rounded-2xl overflow-hidden border-2 border-dashed border-gray-200 flex items-center justify-center shadow-inner">
+                    <span class="text-gray-400 text-sm">尚未設定</span>
                 </div>
                 <div class="flex-1 space-y-4">
                     <input type="file" id="base-input" accept="image/*" class="block w-full text-sm">
@@ -90,6 +90,7 @@
 
     <script type="module">
         // --- 核心配置 ---
+        // ！！！請填入您新申請的 API Key ！！！
         const apiKey = "AIzaSyC8bfxK7FbQCCDBoa479idrAgBFXLq-SC0"; 
 
         const firebaseConfig = {
@@ -120,56 +121,64 @@
             else showGuest();
         });
 
-        // --- AI 融合邏輯 (修正模型路徑) ---
+        // --- AI 融合邏輯 (加入指數退避與多模態輸出) ---
         async function runAI(guestB64) {
-            const statusText = document.getElementById('ai-status-text');
+            if (!apiKey) throw new Error("尚未設定 API Key");
             
-            const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
-            if (!snap.exists()) throw new Error("請先在後台設定新人基底照。");
-            const coupleB64 = snap.data().imageUrl.split(',')[1];
+            // 1. 讀取基底照
+            let coupleB64;
+            try {
+                const snap = await getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'));
+                if (!snap.exists()) throw new Error("請先在管理頁面上傳新人合照");
+                coupleB64 = snap.data().imageUrl.split(',')[1];
+            } catch (e) {
+                throw new Error("【資料庫錯誤】讀取基底照失敗: " + e.message);
+            }
 
-            // 階段一：分析人像 (使用 gemini-2.5-flash-preview-09-2025)
-            statusText.innerText = "正在分析人像...";
-            const analysisPayload = {
+            const guestData = guestB64.split(',')[1];
+
+            const payload = {
                 contents: [{
                     parts: [
-                        { text: "This is a wedding photo(Image 1) and a guest selfie(Image 2). Describe a prompt for an image generator to blend the guest into the wedding scene, standing beside the couple naturally. In English." },
+                        { text: "This is a wedding photo (Image 1) and a selfie (Image 2). Blend the guest from Image 2 into the wedding scene of Image 1 naturally. Output only the final blended image." },
                         { inlineData: { mimeType: "image/jpeg", data: coupleB64 } },
-                        { inlineData: { mimeType: "image/jpeg", data: guestB64.split(',')[1] } }
+                        { inlineData: { mimeType: "image/jpeg", data: guestData } }
                     ]
-                }]
+                }],
+                generationConfig: { responseModalities: ['TEXT', 'IMAGE'] }
             };
 
-            const analysisRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(analysisPayload)
-            });
+            // 指數退避重試邏輯
+            const delays = [1000, 2000, 4000];
+            let lastErr;
 
-            if (!analysisRes.ok) throw new Error("AI 分析失敗，請檢查 Key 權限。");
-            const analysisData = await analysisRes.json();
-            const prompt = analysisData.candidates[0].content.parts[0].text;
+            for (let i = 0; i <= delays.length; i++) {
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-            // 階段二：圖像生成 (使用 imagen-4.0-generate-001)
-            statusText.innerText = "魔法施放中...";
-            const genPayload = {
-                instances: { prompt: prompt },
-                parameters: { sampleCount: 1 }
-            };
+                    if (!res.ok) {
+                        const errText = await res.text();
+                        throw new Error(`Google API 報錯 (HTTP ${res.status}): ${errText}`);
+                    }
 
-            const genRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict?key=${apiKey}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(genPayload)
-            });
+                    const data = await res.json();
+                    const gen = data.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                    if (!gen) throw new Error("AI 未能產出圖片，請嘗試換張自拍照");
+                    return `data:image/png;base64,${gen}`;
 
-            if (!genRes.ok) throw new Error("AI 生成失敗，Imagen 權限尚未開啟或超額。");
-            const genData = await genRes.json();
-            
-            return `data:image/png;base64,${genData.predictions[0].bytesBase64Encoded}`;
+                } catch (e) {
+                    lastErr = e;
+                    if (i < delays.length) await new Promise(r => setTimeout(r, delays[i]));
+                }
+            }
+            throw new Error("【Google AI 錯誤】" + lastErr.message);
         }
 
-        // --- 賓客功能 ---
+        // --- 賓客介面 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const status = document.getElementById('status-msg');
@@ -182,7 +191,7 @@
                     if (!ids.includes(p.id)) {
                         const img = document.createElement('img');
                         img.src = p.imageUrl; img.dataset.id = p.id; img.className = 'floating-photo';
-                        const sz = Math.random()*50+80;
+                        const sz = Math.random()*40+80;
                         img.style.cssText = `width:${sz}px;height:${sz}px;left:${Math.random()*80+5}%;top:${Math.random()*60+20}%;opacity:0;animation-delay:-${Math.random()*10}s`;
                         container.appendChild(img);
                         setTimeout(() => img.style.opacity='1', 100);
@@ -191,9 +200,9 @@
             });
 
             const upload = async (file, ai) => {
-                if (!file) return;
+                if (!file || !auth.currentUser) return;
                 if (ai) document.getElementById('ai-processing').classList.remove('hidden');
-                status.innerText = ai ? "✨ AI 正在製作合體照..." : "💖 傳送成功！";
+                status.innerText = ai ? "✨ AI 魔法運作中..." : "💖 傳送成功！";
                 try {
                     let b64 = await resizeImage(file, 800);
                     if (ai) b64 = await runAI(b64);
@@ -201,7 +210,7 @@
                         imageUrl: b64, timestamp: Date.now(), type: ai ? 'ai' : 'normal'
                     });
                 } catch (e) {
-                    alert("錯誤：" + e.message);
+                    alert(e.message);
                 } finally {
                     document.getElementById('ai-processing').classList.add('hidden');
                     status.innerText = "";
@@ -219,27 +228,22 @@
             const testBtn = document.getElementById('test-api-btn');
             let pending = null;
 
-            // API 測試按鈕邏輯
             testBtn.onclick = async () => {
-                testBtn.innerText = "⌛ 正在連線...";
+                if (!apiKey) return alert("❌ 請先填入 API Key");
+                testBtn.innerText = "⏳ 連線中...";
                 try {
                     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ contents: [{ parts: [{ text: "Say Hello" }] }] })
+                        body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
                     });
-                    if (res.ok) {
-                        const data = await res.json();
-                        alert("✅ API 連線成功！\n回應內容：" + data.candidates[0].content.parts[0].text);
-                    } else {
+                    if (res.ok) alert("✅ 連線成功！文字生成功能正常。");
+                    else {
                         const err = await res.json();
-                        alert("❌ API 失敗\n錯誤代碼：" + res.status + "\n詳細：" + err.error.message);
+                        alert("❌ 失敗: " + err.error.message);
                     }
-                } catch (e) {
-                    alert("❌ 網路連線出錯：" + e.message);
-                } finally {
-                    testBtn.innerText = "🔍 測試 API 連線";
-                }
+                } catch (e) { alert("❌ 網路連線錯誤"); }
+                finally { testBtn.innerText = "🔍 測試 API 連線"; }
             };
 
             getDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto')).then(s => {
@@ -253,9 +257,13 @@
             };
 
             btn.onclick = async () => {
-                await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pending });
-                alert("基底照設定完成！");
-                btn.classList.add('hidden');
+                btn.disabled = true; btn.innerText = "正在儲存...";
+                try {
+                    await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'settings', 'couplePhoto'), { imageUrl: pending });
+                    alert("基底照設定成功！");
+                    btn.classList.add('hidden');
+                } catch (e) { alert("儲存失敗，請檢查 Firebase Rules 權限。"); }
+                finally { btn.disabled = false; btn.innerText = "確認儲存並發佈"; }
             };
 
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
@@ -291,7 +299,7 @@
                         </div>`;
                         if (cont.children.length > 0) {
                             const old = cont.children[0]; old.style.transition = "all 1s"; old.style.opacity = "0";
-                            setTimeout(() => old.remove(), 1000);
+                            setTimeout(() => old.remove(), 1500);
                         }
                         cont.appendChild(frame); await new Promise(r => setTimeout(r, 6000));
                         idx = (idx + 1) % all.length;
