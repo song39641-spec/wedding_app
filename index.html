@@ -28,27 +28,29 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold; pointer-events: none;
         }
 
-        /* 大螢幕牆面動畫 */
-        @keyframes dynamic-drift {
-            0% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
-            50% { transform: translate(var(--mx), var(--my)) rotate(calc(var(--r) + 2deg)) scale(1.02); }
-            100% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
-        }
-
+        /* 大螢幕牆面樣式 (由 JS 控制位置，CSS 只負責外觀與淡入淡出) */
         .wall-card {
-            position: absolute; background: white; padding: 12px;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.6); border-radius: 4px;
-            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
-            animation: dynamic-drift 12s ease-in-out infinite;
-            z-index: 10; display: flex; flex-direction: column;
-            opacity: 0; transform: scale(0.5); /* 初始狀態 */
+            position: absolute; 
+            background: white; 
+            padding: 12px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.7); 
+            border-radius: 6px;
+            /* 只對 opacity 做過渡，transform 交給 JS 每一幀更新以保持流暢 */
+            transition: opacity 1.5s ease-in-out;
+            z-index: 10; 
+            display: flex; 
+            flex-direction: column;
+            opacity: 0; /* 初始隱藏 */
+            will-change: transform, opacity;
         }
-        .wall-card.active { opacity: 1; transform: scale(1); } /* 進場狀態 */
+        
+        /* 進場狀態 */
+        .wall-card.active { opacity: 1; }
         
         .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 10px;}
         .card-message {
             color: #333; font-family: 'Caveat', 'Noto Serif TC', serif;
-            font-size: 1.3rem; line-height: 1.2; text-align: center;
+            font-size: 1.4rem; line-height: 1.2; text-align: center;
             min-height: 1.5em; display: flex; align-items: center; justify-content: center;
             word-break: break-all; font-weight: bold;
         }
@@ -195,7 +197,7 @@
             return comp();
         }
 
-        // --- 賓客功能：JS 物理碰撞 ---
+        // --- 賓客功能：JS 物理碰撞引擎 (Bouncing Balls Logic) ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const container = document.getElementById('physics-container');
@@ -205,12 +207,16 @@
             let physicsObjects = [];
             let containerBounds = { width: 0, height: 0 };
 
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(30)), (s) => {
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
                 allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (physicsObjects.length === 0 && allPhotos.length > 0) rotatePhotos();
+                if (physicsObjects.length === 0 && allPhotos.length > 0) {
+                    rotatePhotos();
+                }
             });
 
-            setInterval(() => { if (allPhotos.length > 0) rotatePhotos(); }, 60000); 
+            setInterval(() => {
+                if (allPhotos.length > 0) rotatePhotos();
+            }, 60000); 
 
             function rotatePhotos() {
                 container.innerHTML = '';
@@ -278,75 +284,108 @@
             document.getElementById('photo-input').onchange = (e) => handleUpload(e.target.files[0]);
         }
 
-        // --- 大螢幕邏輯 (修復不顯示問題) ---
+        // --- 大螢幕邏輯：自由漂浮與隨機更新 ---
         function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const wall = document.getElementById('wall-container');
             const emptyState = document.getElementById('empty-state');
             
             let allPhotos = [];
-            let isCycleStarted = false;
+            let activeCards = [];
+            let animationFrameId;
+            let bounds = { width: window.innerWidth, height: window.innerHeight };
 
-            // 使用最基礎的 collection 監聽，避免索引問題
+            // 監聽視窗大小變化
+            window.addEventListener('resize', () => {
+                bounds = { width: window.innerWidth, height: window.innerHeight };
+            });
+
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
                 const currentData = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 allPhotos = currentData;
                 
-                // 如果有照片，隱藏等待文字
                 if (allPhotos.length > 0) {
                     emptyState.style.display = 'none';
-                    // 確保只啟動一次循環
-                    if (!isCycleStarted) {
-                        startWallCycle();
-                        isCycleStarted = true;
-                    }
+                    if (activeCards.length === 0) startWallCycle();
                 } else {
                     emptyState.style.display = 'flex';
                 }
             });
 
-            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 5000); 
+            // 1分鐘 (60000ms) 換一批
+            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 60000); 
 
             function startWallCycle() {
-                // 清除舊卡片
-                Array.from(wall.children).forEach(child => {
-                    child.classList.remove('active'); // 觸發 CSS opacity: 0
-                    setTimeout(() => child.remove(), 1200);
+                // 淡出舊卡片
+                activeCards.forEach(card => {
+                    card.el.classList.remove('active');
+                    setTimeout(() => card.el.remove(), 1500);
                 });
+                activeCards = []; // 清空陣列，停止對舊卡片的物理計算
 
-                // 隨機選 8 張
+                // 隨機選 8-10 張 (包含新照片)
                 const count = Math.min(allPhotos.length, 8);
-                // 優先選擇最新的照片 (利用 timestamp 排序)
+                // 優先選擇一些最新的，剩下的隨機
                 const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
-                // 前 4 張必選最新的，後 4 張隨機
-                const recent = sorted.slice(0, 4);
-                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
-                const displaySet = [...recent, ...others].slice(0, 8);
+                const recent = sorted.slice(0, 3); // 取前3張最新的
+                const others = sorted.slice(3).sort(() => 0.5 - Math.random());
+                const displaySet = [...recent, ...others].slice(0, count);
 
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
-                    card.className = `wall-card`; // 初始狀態 opacity: 0
+                    card.className = `wall-card`; // 初始 opacity 0
                     
-                    const size = Math.random()*120 + 320; 
-                    const col = index % 4;
-                    const row = Math.floor(index / 4);
-                    const left = col * 25 + (Math.random() * 10 - 5); 
-                    const top = row * 40 + (Math.random() * 20 + 5);
-                    const rotate = (Math.random() * 16 - 8);
-                    const mx = (Math.random() * 60 - 30) + 'px';
-                    const my = (Math.random() * 60 - 30) + 'px';
+                    const size = Math.random() * 100 + 300; // 300px - 400px
+                    const cardW = size;
+                    const cardH = size + 60; // 加上文字區高度
+
+                    // 隨機位置 (避開邊界)
+                    const x = Math.random() * (bounds.width - cardW);
+                    const y = Math.random() * (bounds.height - cardH);
                     
-                    card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
-                    card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
+                    // 隨機速度 (緩慢漂浮)
+                    const vx = (Math.random() - 0.5) * 0.8; 
+                    const vy = (Math.random() - 0.5) * 0.8;
+                    const rot = (Math.random() - 0.5) * 10; // 初始角度
+                    const vrot = (Math.random() - 0.5) * 0.05; // 旋轉速度
+
+                    card.style.width = `${size}px`;
+                    card.style.transform = `translate(${x}px, ${y}px) rotate(${rot}deg)`;
                     card.style.zIndex = index;
                     
                     card.innerHTML = `<img src="${photo.imageUrl}"><div class="card-message">${photo.message || "Happy Wedding!"}</div>`;
                     wall.appendChild(card);
                     
-                    // 延遲觸發進場動畫 (加上 active class)
-                    setTimeout(() => card.classList.add('active'), index * 100 + 50);
+                    // 錯開進場
+                    setTimeout(() => card.classList.add('active'), index * 100 + 100);
+
+                    activeCards.push({
+                        el: card,
+                        x: x, y: y,
+                        vx: vx, vy: vy,
+                        rot: rot, vrot: vrot,
+                        w: cardW, h: cardH
+                    });
                 });
             }
+
+            // 物理引擎：更新大螢幕卡片位置
+            function animateDashboard() {
+                activeCards.forEach(card => {
+                    card.x += card.vx;
+                    card.y += card.vy;
+                    card.rot += card.vrot;
+
+                    // 邊界反彈
+                    if (card.x <= 0 || card.x >= bounds.width - card.w) card.vx *= -1;
+                    if (card.y <= 0 || card.y >= bounds.height - card.h) card.vy *= -1;
+
+                    // 應用位置
+                    card.el.style.transform = `translate(${card.x}px, ${card.y}px) rotate(${card.rot}deg)`;
+                });
+                requestAnimationFrame(animateDashboard);
+            }
+            animateDashboard();
         }
 
         function showAdmin() {
