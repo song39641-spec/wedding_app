@@ -12,69 +12,48 @@
         body { font-family: 'Noto Serif TC', serif; background-color: #0c0c0c; color: white; overflow: hidden; }
         .gradient-bg { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
         
-        /* 賓客端物理物件樣式 (移除 CSS 動畫，改由 JS 控制) */
+        /* 賓客端漂浮小照片 */
         .physics-item {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            /* 移除 transition 以免干擾 JS 的高頻更新 */
-            will-change: transform;
-            z-index: 10;
-            width: 80px; 
-            height: 80px;
-            user-select: none;
+            position: absolute; display: flex; flex-direction: column; align-items: center;
+            will-change: transform; z-index: 10; width: 80px; height: 80px; user-select: none;
         }
-
         .physics-item img {
             width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-            pointer-events: none; /* 避免拖曳圖片 */
+            border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.3); pointer-events: none;
         }
-        
         .physics-item .msg-tag {
-            position: absolute;
-            bottom: -25px;
-            background: rgba(255, 255, 255, 0.95); padding: 2px 8px; border-radius: 12px;
-            font-size: 10px; color: #333; white-space: nowrap;
-            max-width: 120px; overflow: hidden; text-overflow: ellipsis;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold;
-            pointer-events: none;
+            position: absolute; bottom: -25px; background: rgba(255, 255, 255, 0.95);
+            padding: 2px 8px; border-radius: 12px; font-size: 10px; color: #333;
+            white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2); font-weight: bold; pointer-events: none;
         }
 
         /* 大螢幕牆面動畫 */
         @keyframes dynamic-drift {
             0% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
-            33% { transform: translate(var(--mx), var(--my)) rotate(calc(var(--r) + 2deg)) scale(1.03); }
-            66% { transform: translate(calc(var(--mx) * -0.8), calc(var(--my) * 1.2)) rotate(calc(var(--r) - 2deg)) scale(0.98); }
+            50% { transform: translate(var(--mx), var(--my)) rotate(calc(var(--r) + 2deg)) scale(1.02); }
             100% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
         }
 
         .wall-card {
-            position: absolute;
-            background: white;
-            padding: 12px;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.6);
-            border-radius: 4px;
-            transition: all 1.5s cubic-bezier(0.23, 1, 0.32, 1);
-            animation: dynamic-drift 18s ease-in-out infinite;
-            z-index: 10;
-            display: flex; flex-direction: column;
+            position: absolute; background: white; padding: 12px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.6); border-radius: 4px;
+            transition: all 1.2s cubic-bezier(0.23, 1, 0.32, 1);
+            animation: dynamic-drift 12s ease-in-out infinite;
+            z-index: 10; display: flex; flex-direction: column;
+            opacity: 0; transform: scale(0.5); /* 初始狀態 */
         }
-        .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 10px;}
+        .wall-card.active { opacity: 1; transform: scale(1); } /* 進場狀態 */
         
+        .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 10px;}
         .card-message {
             color: #333; font-family: 'Caveat', 'Noto Serif TC', serif;
-            font-size: 1.2rem; line-height: 1.4; text-align: center;
+            font-size: 1.3rem; line-height: 1.2; text-align: center;
             min-height: 1.5em; display: flex; align-items: center; justify-content: center;
-            word-break: break-all;
+            word-break: break-all; font-weight: bold;
         }
 
-        .fade-in { opacity: 0; transform: translateY(300px) scale(0.1) rotate(0deg) !important; }
-        .fade-out { opacity: 0; transform: translateY(-300px) scale(1.5) rotate(15deg) !important; }
-        
         #custom-modal { display: none; }
-        
         .message-input {
             background: rgba(255, 255, 255, 0.9); border: 2px solid #e5e7eb;
             color: #333; font-family: 'Noto Serif TC', serif;
@@ -86,13 +65,12 @@
 
     <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-pink-500 mb-4"></div>
-        <p class="text-gray-400 text-sm">正在載入幸福魔法...</p>
+        <p class="text-gray-400 text-sm">正在連線...</p>
     </div>
 
     <!-- 訊息提示 -->
     <div id="custom-modal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
         <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center text-gray-800">
-            <div id="modal-icon" class="mb-4 text-4xl">💡</div>
             <h3 id="modal-title" class="text-xl font-bold mb-2 font-serif">提示</h3>
             <p id="modal-body" class="text-gray-500 text-sm mb-6"></p>
             <button onclick="closeModal()" class="w-full py-3 bg-gray-900 text-white rounded-full font-bold">了解</button>
@@ -108,14 +86,13 @@
 
         <div class="bg-white p-6 rounded-[2rem] shadow-xl border border-gray-100 mb-8 relative z-10">
             <div class="mb-6">
-                <label class="block text-gray-500 text-sm font-bold mb-2 ml-2">寫下您的祝福 (選填)</label>
-                <textarea id="guest-message" rows="2" maxlength="30" placeholder="一句話送給新人..." class="message-input w-full px-4 py-3 rounded-xl resize-none text-lg"></textarea>
-                <p class="text-right text-xs text-gray-300 mt-1">最多 30 字</p>
+                <label class="block text-gray-500 text-sm font-bold mb-2 ml-2">寫下您的祝福</label>
+                <textarea id="guest-message" rows="2" maxlength="20" placeholder="一句話送給新人..." class="message-input w-full px-4 py-3 rounded-xl resize-none text-lg"></textarea>
             </div>
 
             <div class="relative h-20 rounded-2xl gradient-bg shadow-lg flex items-center justify-center overflow-hidden active:scale-95 transition-transform cursor-pointer group">
                 <div class="flex items-center gap-3">
-                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 011.664.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     <span class="text-white font-bold text-xl font-serif">選擇照片並上傳</span>
                 </div>
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
@@ -127,12 +104,9 @@
         <div class="flex-1 relative w-full">
             <div class="flex justify-between items-center mb-2 px-4">
                 <h3 class="text-gray-400 text-xs font-bold tracking-widest">LIVE POOL</h3>
-                <span class="text-[10px] text-gray-300 bg-gray-100 px-2 py-1 rounded-full">每 1 分鐘換一批</span>
+                <span class="text-[10px] text-gray-300 bg-gray-100 px-2 py-1 rounded-full">每 1 分鐘更新</span>
             </div>
-            <!-- 加高容器以增加移動範圍 -->
-            <div id="physics-container" class="rounded-[2.5rem] bg-white w-full h-[400px] relative overflow-hidden border border-gray-100 shadow-inner">
-                <!-- 物理物件將在這裡生成 -->
-            </div>
+            <div id="physics-container" class="rounded-[2.5rem] bg-white w-full h-[400px] relative overflow-hidden border border-gray-100 shadow-inner"></div>
         </div>
     </div>
 
@@ -142,6 +116,12 @@
             <p class="text-7xl font-bold tracking-widest">BLESSINGS</p>
             <p class="text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
         </div>
+        
+        <!-- 等待中的提示 -->
+        <div id="empty-state" class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+            <p class="text-white/20 text-2xl font-serif animate-pulse">等待照片上傳中...</p>
+        </div>
+
         <div id="wall-container" class="relative w-full h-full"></div>
     </div>
 
@@ -215,7 +195,7 @@
             return comp();
         }
 
-        // --- 賓客功能：JS 物理碰撞引擎 (Bouncing Balls Logic) ---
+        // --- 賓客功能：JS 物理碰撞 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const container = document.getElementById('physics-container');
@@ -223,123 +203,62 @@
             
             let allPhotos = [];
             let physicsObjects = [];
-            let animationFrameId;
             let containerBounds = { width: 0, height: 0 };
 
-            // 1. 抓取照片庫 (增加數量限制以供輪播)
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(30)), (s) => {
                 allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                // 如果是第一次載入，立刻啟動
-                if (physicsObjects.length === 0 && allPhotos.length > 0) {
-                    rotatePhotos();
-                }
+                if (physicsObjects.length === 0 && allPhotos.length > 0) rotatePhotos();
             });
 
-            // 2. 輪播邏輯 (1分鐘 = 60000ms)
-            setInterval(() => {
-                if (allPhotos.length > 0) rotatePhotos();
-            }, 60000); 
+            setInterval(() => { if (allPhotos.length > 0) rotatePhotos(); }, 60000); 
 
             function rotatePhotos() {
-                // 清空現有
                 container.innerHTML = '';
                 physicsObjects = [];
-                
-                // 隨機選 6-8 張
                 const count = Math.min(allPhotos.length, 8);
                 const batch = [...allPhotos].sort(() => 0.5 - Math.random()).slice(0, count);
-                
-                // 初始化物理物件
                 containerBounds = container.getBoundingClientRect();
                 
                 batch.forEach(photo => {
                     const el = document.createElement('div');
                     el.className = 'physics-item';
-                    el.innerHTML = `
-                        <img src="${photo.imageUrl}">
-                        <div class="msg-tag">${photo.message || "Happy Wedding!"}</div>
-                    `;
+                    el.innerHTML = `<img src="${photo.imageUrl}"><div class="msg-tag">${photo.message || "Happy Wedding!"}</div>`;
                     container.appendChild(el);
-
-                    // 隨機初始位置與速度 (速度從 1.5 降為 0.4，移動更緩慢)
                     const size = 80;
                     physicsObjects.push({
                         el: el,
                         x: Math.random() * (containerBounds.width - size),
                         y: Math.random() * (containerBounds.height - size),
-                        vx: (Math.random() - 0.5) * 0.4, // 大幅降低速度
-                        vy: (Math.random() - 0.5) * 0.4,
-                        radius: size / 2,
-                        mass: 1
+                        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+                        radius: size / 2
                     });
                 });
             }
 
-            // 3. 物理引擎迴圈
             function updatePhysics() {
-                containerBounds = container.getBoundingClientRect(); // RWD update
-                const size = 80; // 假設圓球直徑
-
-                // 更新位置
+                containerBounds = container.getBoundingClientRect();
+                const size = 80;
                 physicsObjects.forEach(obj => {
-                    obj.x += obj.vx;
-                    obj.y += obj.vy;
-
-                    // 邊界碰撞 (Bounce off walls)
-                    if (obj.x <= 0) { obj.x = 0; obj.vx *= -1; }
-                    if (obj.x >= containerBounds.width - size) { obj.x = containerBounds.width - size; obj.vx *= -1; }
-                    if (obj.y <= 0) { obj.y = 0; obj.vy *= -1; }
-                    if (obj.y >= containerBounds.height - size) { obj.y = containerBounds.height - size; obj.vy *= -1; }
+                    obj.x += obj.vx; obj.y += obj.vy;
+                    if (obj.x <= 0 || obj.x >= containerBounds.width - size) obj.vx *= -1;
+                    if (obj.y <= 0 || obj.y >= containerBounds.height - size) obj.vy *= -1;
                 });
-
-                // 物件互相碰撞 (Circle Collision)
                 for (let i = 0; i < physicsObjects.length; i++) {
                     for (let j = i + 1; j < physicsObjects.length; j++) {
-                        const p1 = physicsObjects[i];
-                        const p2 = physicsObjects[j];
-                        
-                        // 計算中心距離
-                        const dx = (p2.x + p2.radius) - (p1.x + p1.radius);
-                        const dy = (p2.y + p2.radius) - (p1.y + p1.radius);
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        const minDistance = p1.radius + p2.radius + 5; // +5 為緩衝
-
-                        if (distance < minDistance) {
-                            // 碰撞發生！簡單的彈性碰撞回應
-                            // 交換速度 (簡化版物理，假設質量相同)
-                            const tempVx = p1.vx;
-                            const tempVy = p1.vy;
-                            p1.vx = p2.vx;
-                            p1.vy = p2.vy;
-                            p2.vx = tempVx;
-                            p2.vy = tempVy;
-
-                            // 防止重疊卡住：將兩者推開
-                            const overlap = minDistance - distance;
-                            const angle = Math.atan2(dy, dx);
-                            const moveX = overlap * Math.cos(angle) * 0.5;
-                            const moveY = overlap * Math.sin(angle) * 0.5;
-                            
-                            p1.x -= moveX;
-                            p1.y -= moveY;
-                            p2.x += moveX;
-                            p2.y += moveY;
+                        const p1 = physicsObjects[i], p2 = physicsObjects[j];
+                        const dx = (p2.x) - (p1.x), dy = (p2.y) - (p1.y);
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 85) {
+                            const tx = p1.vx; p1.vx = p2.vx; p2.vx = tx;
+                            const ty = p1.vy; p1.vy = p2.vy; p2.vy = ty;
                         }
                     }
                 }
-
-                // 渲染
-                physicsObjects.forEach(obj => {
-                    obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`;
-                });
-
-                animationFrameId = requestAnimationFrame(updatePhysics);
+                physicsObjects.forEach(obj => { obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`; });
+                requestAnimationFrame(updatePhysics);
             }
-
-            // 啟動物理引擎
             updatePhysics();
 
-            // 上傳邏輯
             const handleUpload = async (file) => {
                 if (!file) return;
                 const status = document.getElementById('status-msg');
@@ -350,59 +269,64 @@
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64, message: message, timestamp: Date.now()
                     });
-                    status.innerText = "上傳成功！";
-                    msgInput.value = "";
+                    status.innerText = "上傳成功！"; msgInput.value = "";
                 } catch (e) {
-                    showMessage("上傳失敗", e.message);
+                    showMessage("上傳失敗", "請確認網路或 Firebase 權限");
                     status.innerText = "";
-                } finally {
-                    setTimeout(() => status.innerText = "", 3000);
-                }
+                } finally { setTimeout(() => status.innerText = "", 3000); }
             };
             document.getElementById('photo-input').onchange = (e) => handleUpload(e.target.files[0]);
         }
 
-        // --- 大螢幕邏輯 ---
+        // --- 大螢幕邏輯 (修復不顯示問題) ---
         function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const wall = document.getElementById('wall-container');
+            const emptyState = document.getElementById('empty-state');
+            
             let allPhotos = [];
-            let playQueue = [];
-            let priorityQueue = []; 
+            let isCycleStarted = false;
 
+            // 使用最基礎的 collection 監聽，避免索引問題
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
                 const currentData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                s.docChanges().forEach(change => {
-                    if (change.type === "added" && allPhotos.length > 0) { 
-                        priorityQueue.push(change.doc.data());
-                    }
-                });
                 allPhotos = currentData;
-                if (wall.children.length === 0 && allPhotos.length > 0) startWallCycle();
+                
+                // 如果有照片，隱藏等待文字
+                if (allPhotos.length > 0) {
+                    emptyState.style.display = 'none';
+                    // 確保只啟動一次循環
+                    if (!isCycleStarted) {
+                        startWallCycle();
+                        isCycleStarted = true;
+                    }
+                } else {
+                    emptyState.style.display = 'flex';
+                }
             });
 
-            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 6000); 
+            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 5000); 
 
             function startWallCycle() {
+                // 清除舊卡片
                 Array.from(wall.children).forEach(child => {
-                    child.classList.add('fade-out');
+                    child.classList.remove('active'); // 觸發 CSS opacity: 0
                     setTimeout(() => child.remove(), 1200);
                 });
 
-                let nextBatch = [];
-                while (priorityQueue.length > 0 && nextBatch.length < 4) nextBatch.push(priorityQueue.shift());
-                while (nextBatch.length < 8) {
-                    if (playQueue.length === 0) {
-                        if (allPhotos.length === 0) break;
-                        playQueue = [...allPhotos].sort(() => 0.5 - Math.random());
-                    }
-                    const nextPhoto = playQueue.shift();
-                    if (!nextBatch.find(p => p.imageUrl === nextPhoto.imageUrl)) nextBatch.push(nextPhoto);
-                }
+                // 隨機選 8 張
+                const count = Math.min(allPhotos.length, 8);
+                // 優先選擇最新的照片 (利用 timestamp 排序)
+                const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
+                // 前 4 張必選最新的，後 4 張隨機
+                const recent = sorted.slice(0, 4);
+                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
+                const displaySet = [...recent, ...others].slice(0, 8);
 
-                nextBatch.forEach((photo, index) => {
+                displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
-                    card.className = `wall-card fade-in`;
+                    card.className = `wall-card`; // 初始狀態 opacity: 0
+                    
                     const size = Math.random()*120 + 320; 
                     const col = index % 4;
                     const row = Math.floor(index / 4);
@@ -415,9 +339,12 @@
                     card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
                     card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
                     card.style.zIndex = index;
+                    
                     card.innerHTML = `<img src="${photo.imageUrl}"><div class="card-message">${photo.message || "Happy Wedding!"}</div>`;
                     wall.appendChild(card);
-                    setTimeout(() => card.classList.remove('fade-in'), index * 100 + 50);
+                    
+                    // 延遲觸發進場動畫 (加上 active class)
+                    setTimeout(() => card.classList.add('active'), index * 100 + 50);
                 });
             }
         }
