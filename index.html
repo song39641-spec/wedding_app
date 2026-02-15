@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wedding Moments - 婚禮相片分享</title>
+    <!-- 引入彩帶特效庫 -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
-        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap'); /* 手寫體 */
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
 
-        body { font-family: 'Noto Serif TC', serif; background-color: #fdfaf6; color: #333; overflow: hidden; }
+        body { font-family: 'Noto Serif TC', serif; background-color: #0c0c0c; color: white; overflow: hidden; }
         .gradient-bg { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
         
         /* 賓客端漂浮小照片 */
@@ -41,22 +43,59 @@
             transition: all 1.5s cubic-bezier(0.23, 1, 0.32, 1);
             animation: dynamic-drift 12s ease-in-out infinite;
             z-index: 10; display: flex; flex-direction: column;
-            opacity: 0; transform: scale(0.5); /* 初始狀態 */
+            opacity: 0; transform: scale(0.5); 
             max-width: 280px;
         }
-        .wall-card.active { opacity: 1; transform: scale(1); } /* 進場狀態 */
+        .wall-card.active { opacity: 1; transform: scale(1); } 
         
         .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 12px; background-color: #f3f4f6;}
         
         .card-message {
-            color: #444; font-family: 'Caveat', serif; /* 手寫體 */
+            color: #444; font-family: 'Caveat', serif;
             font-size: 1.5rem; line-height: 1.2; text-align: center;
             min-height: 1.2em; display: flex; align-items: center; justify-content: center;
             word-break: break-all; font-weight: 700;
         }
 
+        /* 抽獎模式樣式 */
+        #draw-overlay {
+            display: none; position: fixed; inset: 0; z-index: 100;
+            background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
+            flex-direction: column; align-items: center; justify-content: center;
+        }
+        #draw-title {
+            font-size: 4rem; color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
+            margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em;
+        }
+        .winners-grid { display: flex; gap: 40px; justify-content: center; align-items: center; }
+        .winner-card {
+            background: white; padding: 20px 20px 60px 20px; border-radius: 8px;
+            transform: scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 0 50px rgba(255,215,0, 0.5); border: 4px solid gold;
+            width: 350px; position: relative;
+        }
+        .winner-card.reveal { transform: scale(1); }
+        .winner-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; }
+        .winner-rank {
+            position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+            background: gold; color: #d32f2f; font-weight: bold; padding: 5px 20px;
+            border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-size: 1.2rem;
+            white-space: nowrap; z-index: 20;
+        }
+        .winner-msg {
+            position: absolute; bottom: 15px; left: 0; right: 0; text-align: center;
+            color: #333; font-family: 'Caveat', serif; font-size: 1.8rem; font-weight: bold;
+        }
+
+        /* 滾動動畫 */
+        @keyframes slot-machine {
+            0% { transform: translateY(-10px); opacity: 0.5; }
+            50% { transform: translateY(10px); opacity: 1; }
+            100% { transform: translateY(-10px); opacity: 0.5; }
+        }
+        .shuffling .winner-card { animation: slot-machine 0.1s infinite; border-color: #fff; box-shadow: none; }
+
         #custom-modal { display: none; }
-        
         .message-input {
             background: #fff; border: 2px solid #eee;
             color: #333; font-family: 'Noto Serif TC', serif;
@@ -88,24 +127,16 @@
         </header>
 
         <div class="bg-white p-6 rounded-[2rem] shadow-xl border border-white mb-6 relative z-10">
-            
-            <!-- 拍照任務提示區 (左文右圖) -->
             <div class="mb-6 rounded-2xl border border-pink-200 bg-pink-50 p-4 shadow-sm relative overflow-hidden">
-                <!-- 裝飾圓點 -->
                 <div class="absolute -right-4 -top-4 w-20 h-20 bg-pink-100 rounded-full opacity-50"></div>
-                
                 <div class="flex items-center justify-between relative z-10">
                     <div class="text-left pr-2">
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
-                            請拿起桌上的<br>
-                            <span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>
-                            拍張可愛自拍吧！
+                            請拿起桌上的<br><span class="text-pink-600 text-lg">應援手燈</span> 🪄<br>拍張可愛自拍照祝福我們吧！
                         </p>
                     </div>
-                    <!-- 示意圖區域 -->
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                        <!-- 請將您上傳的插圖存為 instruction.jpg -->
                         <img src="instruction.jpg" onerror="this.src='https://placehold.co/100x140/pink/white?text=No+Image'" class="w-full h-full object-cover rounded-xl border-4 border-white shadow-md">
                     </div>
                 </div>
@@ -121,13 +152,11 @@
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     <span class="text-white font-bold text-lg font-serif">開啟相機上傳</span>
                 </div>
-                <!-- 支援手機喚起相機 -->
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
         </div>
 
         <div id="status-msg" class="text-center text-sm font-medium text-pink-600 mb-4 h-6"></div>
-        
         <div class="flex-1 relative w-full min-h-[300px]">
             <div class="flex justify-between items-center mb-2 px-4">
                 <h3 class="text-gray-400 text-xs font-bold tracking-widest">LIVE POOL</h3>
@@ -139,24 +168,54 @@
 
     <!-- 大螢幕播放 -->
     <div id="dashboard-view" class="hidden fixed inset-0 bg-[#1a1a1a] overflow-hidden">
-        <div class="absolute bottom-12 left-12 z-[50] text-white opacity-80 font-serif pointer-events-none text-shadow-lg">
+        <div class="absolute bottom-10 left-10 z-[50] text-white opacity-30 font-serif pointer-events-none">
             <p class="text-7xl font-bold tracking-widest">BLESSINGS</p>
-            <p class="text-2xl tracking-[0.6em] mt-2 uppercase text-pink-200">Capture the Love</p>
+            <p class="text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
         </div>
-        
-        <!-- 等待中的提示 -->
         <div id="empty-state" class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-            <p class="text-white/30 text-3xl font-serif animate-pulse tracking-widest">等待照片上傳中...</p>
+            <p class="text-white/20 text-2xl font-serif animate-pulse">等待照片上傳中...</p>
         </div>
-
         <div id="wall-container" class="relative w-full h-full"></div>
+
+        <!-- 抽獎層 -->
+        <div id="draw-overlay">
+            <h1 id="draw-title">LUCKY DRAW</h1>
+            <div class="winners-grid">
+                <div class="winner-card" id="winner-1">
+                    <div class="winner-rank">Winner 1</div>
+                    <img src="https://placehold.co/300x300?text=?" alt="winner">
+                    <div class="winner-msg">???</div>
+                </div>
+                <div class="winner-card" id="winner-2">
+                    <div class="winner-rank">Winner 2</div>
+                    <img src="https://placehold.co/300x300?text=?" alt="winner">
+                    <div class="winner-msg">???</div>
+                </div>
+                <div class="winner-card" id="winner-3">
+                    <div class="winner-rank">Winner 3</div>
+                    <img src="https://placehold.co/300x300?text=?" alt="winner">
+                    <div class="winner-msg">???</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 管理端 -->
     <div id="admin-view" class="hidden w-full max-w-4xl mx-auto px-6 py-12 bg-white min-h-screen text-gray-800">
         <div class="flex justify-between items-center mb-8 border-b pb-4">
-            <h2 class="text-2xl font-bold font-serif text-gray-800">照片管理後台</h2>
-            <p id="photo-count" class="text-gray-500 text-sm">統計中...</p>
+            <div>
+                <h2 class="text-2xl font-bold font-serif text-gray-800">照片管理後台</h2>
+                <p id="photo-count" class="text-gray-500 text-sm">統計中...</p>
+            </div>
+            <!-- 抽獎控制區 -->
+            <div class="flex gap-2">
+                <button onclick="window.startDraw()" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:opacity-90 transform active:scale-95 transition-all">
+                    🎰 抽出 3 位幸運兒
+                </button>
+                <button onclick="window.resetDraw()" class="bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-full hover:bg-gray-300">
+                    🔄 清除畫面
+                </button>
+            </div>
         </div>
         <div id="admin-gallery" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
     </div>
@@ -173,7 +232,7 @@
 
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
         import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, limit } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, query, orderBy, limit, setDoc, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
@@ -196,7 +255,6 @@
         };
         window.closeModal = () => { document.getElementById('custom-modal').style.display = 'none'; };
 
-        // 圖片壓縮函數
         async function aggressiveResize(inputSource, targetSize = 800) {
             const getImg = (src) => new Promise((resolve) => {
                 const img = new Image();
@@ -223,70 +281,42 @@
             return comp();
         }
 
-        // --- 賓客功能：JS 物理碰撞引擎 ---
+        // --- 賓客功能 ---
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
             const container = document.getElementById('physics-container');
             const msgInput = document.getElementById('guest-message');
-            
-            let allPhotos = [];
             let physicsObjects = [];
             let containerBounds = { width: 0, height: 0 };
 
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
-                allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                if (physicsObjects.length === 0 && allPhotos.length > 0) {
-                    rotatePhotos();
-                }
-            });
-
-            setInterval(() => {
-                if (allPhotos.length > 0) rotatePhotos();
-            }, 60000); 
-
-            function rotatePhotos() {
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(30)), (s) => {
+                const allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                // 簡易重繪 (賓客端保持簡單)
                 container.innerHTML = '';
                 physicsObjects = [];
                 const count = Math.min(allPhotos.length, 8);
-                const batch = [...allPhotos].sort(() => 0.5 - Math.random()).slice(0, count);
                 containerBounds = container.getBoundingClientRect();
                 
-                batch.forEach(photo => {
+                allPhotos.slice(0, count).forEach(photo => {
                     const el = document.createElement('div');
                     el.className = 'physics-item';
                     el.innerHTML = `<img src="${photo.imageUrl}"><div class="msg-tag">${photo.message || "Happy Wedding!"}</div>`;
                     container.appendChild(el);
-                    const size = 80;
                     physicsObjects.push({
-                        el: el,
-                        x: Math.random() * (containerBounds.width - size),
-                        y: Math.random() * (containerBounds.height - size),
-                        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
-                        radius: size / 2
+                        el: el, x: Math.random()*(containerBounds.width-80), y: Math.random()*(containerBounds.height-80),
+                        vx: (Math.random()-0.5)*0.8, vy: (Math.random()-0.5)*0.8
                     });
                 });
-            }
+            });
 
             function updatePhysics() {
                 containerBounds = container.getBoundingClientRect();
-                const size = 80;
                 physicsObjects.forEach(obj => {
                     obj.x += obj.vx; obj.y += obj.vy;
-                    if (obj.x <= 0 || obj.x >= containerBounds.width - size) obj.vx *= -1;
-                    if (obj.y <= 0 || obj.y >= containerBounds.height - size) obj.vy *= -1;
+                    if(obj.x<=0 || obj.x>=containerBounds.width-80) obj.vx*=-1;
+                    if(obj.y<=0 || obj.y>=containerBounds.height-80) obj.vy*=-1;
+                    obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`;
                 });
-                for (let i = 0; i < physicsObjects.length; i++) {
-                    for (let j = i + 1; j < physicsObjects.length; j++) {
-                        const p1 = physicsObjects[i], p2 = physicsObjects[j];
-                        const dx = (p2.x) - (p1.x), dy = (p2.y) - (p1.y);
-                        const dist = Math.sqrt(dx*dx + dy*dy);
-                        if (dist < 85) {
-                            const tx = p1.vx; p1.vx = p2.vx; p2.vx = tx;
-                            const ty = p1.vy; p1.vy = p2.vy; p2.vy = ty;
-                        }
-                    }
-                }
-                physicsObjects.forEach(obj => { obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`; });
                 requestAnimationFrame(updatePhysics);
             }
             updatePhysics();
@@ -303,34 +333,76 @@
                     });
                     status.innerText = "上傳成功！"; msgInput.value = "";
                 } catch (e) {
-                    showMessage("上傳失敗", "請確認網路或 Firebase 權限");
+                    showMessage("上傳失敗", e.message);
                     status.innerText = "";
                 } finally { setTimeout(() => status.innerText = "", 3000); }
             };
             document.getElementById('photo-input').onchange = (e) => handleUpload(e.target.files[0]);
         }
 
-        // --- 大螢幕邏輯 ---
+        // --- 大螢幕邏輯 (含抽獎監聽) ---
         function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const wall = document.getElementById('wall-container');
             const emptyState = document.getElementById('empty-state');
+            const drawOverlay = document.getElementById('draw-overlay');
+            const winnerCards = document.querySelectorAll('.winner-card');
             
             let allPhotos = [];
             let isCycleStarted = false;
 
+            // 1. 監聽照片
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
-                const currentData = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                allPhotos = currentData;
-                
+                allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 if (allPhotos.length > 0) {
                     emptyState.style.display = 'none';
-                    if (!isCycleStarted) {
-                        startWallCycle();
-                        isCycleStarted = true;
-                    }
-                } else {
-                    emptyState.style.display = 'flex';
+                    if (!isCycleStarted) { startWallCycle(); isCycleStarted = true; }
+                }
+            });
+
+            // 2. 監聽抽獎狀態
+            onSnapshot(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), (docSnap) => {
+                if (!docSnap.exists()) return;
+                const data = docSnap.data();
+                
+                if (data.status === 'drawing') {
+                    // 開始抽獎動畫 (拉霸機效果)
+                    drawOverlay.style.display = 'flex';
+                    drawOverlay.classList.add('shuffling'); // 加入震動動畫
+                    winnerCards.forEach(card => card.classList.remove('reveal')); // 隱藏卡片內容
+                    
+                    // 模擬快速切換照片
+                    let shuffleInterval = setInterval(() => {
+                        winnerCards.forEach(card => {
+                            const randomPhoto = allPhotos[Math.floor(Math.random() * allPhotos.length)];
+                            if(randomPhoto) card.querySelector('img').src = randomPhoto.imageUrl;
+                        });
+                    }, 100);
+
+                    // 5秒後顯示結果 (這裡雖然資料庫可能已經有結果，但我們延遲顯示製造氣氛)
+                    setTimeout(() => {
+                        clearInterval(shuffleInterval);
+                        drawOverlay.classList.remove('shuffling');
+                        
+                        // 填入真正的得獎者
+                        if (data.winners && data.winners.length === 3) {
+                            data.winners.forEach((w, i) => {
+                                const card = document.getElementById(`winner-${i+1}`);
+                                card.querySelector('img').src = w.imageUrl;
+                                card.querySelector('.winner-msg').innerText = w.message || "Lucky Winner!";
+                                
+                                // 依序彈出
+                                setTimeout(() => {
+                                    card.classList.add('reveal');
+                                    if(i===2) confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
+                                }, i * 800);
+                            });
+                        }
+                    }, 5000);
+
+                } else if (data.status === 'idle') {
+                    drawOverlay.style.display = 'none'; // 關閉抽獎畫面
+                    winnerCards.forEach(card => card.classList.remove('reveal'));
                 }
             });
 
@@ -344,22 +416,16 @@
 
                 const count = Math.min(allPhotos.length, 8);
                 const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
-                const recent = sorted.slice(0, 4);
-                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
-                const displaySet = [...recent, ...others].slice(0, 8);
+                const displaySet = [...sorted.slice(0, 4), ...sorted.slice(4).sort(()=>0.5-Math.random())].slice(0, count);
 
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
                     card.className = `wall-card`; 
-                    
                     const size = Math.random()*120 + 320; 
-                    const col = index % 4;
-                    const row = Math.floor(index / 4);
-                    const left = col * 25 + (Math.random() * 10 - 5); 
-                    const top = row * 40 + (Math.random() * 20 + 5);
-                    const rotate = (Math.random() * 16 - 8);
-                    const mx = (Math.random() * 60 - 30) + 'px';
-                    const my = (Math.random() * 60 - 30) + 'px';
+                    const left = (index%4) * 25 + (Math.random()*10-5); 
+                    const top = Math.floor(index/4) * 40 + (Math.random()*20+5);
+                    const rotate = (Math.random()*16 - 8);
+                    const mx = (Math.random()*60-30)+'px', my = (Math.random()*60-30)+'px';
                     
                     card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
                     card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
@@ -372,9 +438,40 @@
             }
         }
 
+        // --- 管理後台 (含抽獎邏輯) ---
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
+            
+            // 抽獎邏輯
+            window.startDraw = async () => {
+                const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
+                const photos = snapshot.docs.map(d => d.data());
+                
+                if (photos.length < 3) {
+                    alert("照片數量不足 3 張，無法抽獎！");
+                    return;
+                }
+
+                // 隨機選 3 張不重複
+                const shuffled = photos.sort(() => 0.5 - Math.random());
+                const winners = shuffled.slice(0, 3);
+
+                // 寫入資料庫觸發大螢幕
+                await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
+                    status: 'drawing',
+                    winners: winners,
+                    timestamp: Date.now()
+                });
+            };
+
+            window.resetDraw = async () => {
+                await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
+                    status: 'idle',
+                    timestamp: Date.now()
+                });
+            };
+
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
                 const gal = document.getElementById('admin-gallery'); gal.innerHTML = '';
                 countLabel.innerText = `目前共有 ${s.size} 張照片`;
