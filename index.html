@@ -57,6 +57,16 @@
             word-break: break-all; font-weight: 700;
         }
 
+        /* 星空背景特效 */
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(0.8); }
+            50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
+        }
+        .bg-star {
+            position: absolute; background: white; border-radius: 50%;
+            animation: twinkle infinite ease-in-out;
+        }
+
         /* 抽獎模式樣式 */
         #draw-overlay {
             display: none; position: fixed; inset: 0; z-index: 100;
@@ -105,7 +115,7 @@
 </head>
 <body class="min-h-screen">
 
-    <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white">
+    <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-pink-500 mb-4"></div>
         <p class="text-gray-400 text-sm">正在載入幸福魔法...</p>
     </div>
@@ -127,13 +137,15 @@
         </header>
 
         <div class="bg-white p-6 rounded-[2rem] shadow-xl border border-white mb-6 relative z-10">
+            
+            <!-- 拍照任務提示區 -->
             <div class="mb-6 rounded-2xl border border-pink-200 bg-pink-50 p-4 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 w-20 h-20 bg-pink-100 rounded-full opacity-50"></div>
                 <div class="flex items-center justify-between relative z-10">
                     <div class="text-left pr-2">
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
-                            請拿起桌上的<br><span class="text-pink-600 text-lg">應援手燈</span> 🪄<br>拍張可愛自拍照祝福我們吧！
+                            請拿起桌上的<br><span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>拍張可愛自拍吧！
                         </p>
                     </div>
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
@@ -167,15 +179,22 @@
     </div>
 
     <!-- 大螢幕播放 -->
-    <div id="dashboard-view" class="hidden fixed inset-0 bg-[#1a1a1a] overflow-hidden">
-        <div class="absolute bottom-10 left-10 z-[50] text-white opacity-30 font-serif pointer-events-none">
+    <!-- 更新：背景改為深藍色漸層，模擬夜空 -->
+    <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
+        
+        <!-- 星空背景容器 -->
+        <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
+
+        <div class="absolute bottom-10 left-10 z-[50] text-white opacity-50 font-serif pointer-events-none">
             <p class="text-7xl font-bold tracking-widest">BLESSINGS</p>
             <p class="text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
         </div>
+        
         <div id="empty-state" class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
             <p class="text-white/20 text-2xl font-serif animate-pulse">等待照片上傳中...</p>
         </div>
-        <div id="wall-container" class="relative w-full h-full"></div>
+
+        <div id="wall-container" class="relative w-full h-full z-10"></div>
 
         <!-- 抽獎層 -->
         <div id="draw-overlay">
@@ -207,7 +226,6 @@
                 <h2 class="text-2xl font-bold font-serif text-gray-800">照片管理後台</h2>
                 <p id="photo-count" class="text-gray-500 text-sm">統計中...</p>
             </div>
-            <!-- 抽獎控制區 -->
             <div class="flex gap-2">
                 <button onclick="window.startDraw()" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:opacity-90 transform active:scale-95 transition-all">
                     🎰 抽出 3 位幸運兒
@@ -289,34 +307,60 @@
             let physicsObjects = [];
             let containerBounds = { width: 0, height: 0 };
 
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(30)), (s) => {
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
                 const allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                // 簡易重繪 (賓客端保持簡單)
+                if (physicsObjects.length === 0 && allPhotos.length > 0) {
+                    rotatePhotos(allPhotos);
+                }
+            });
+
+            // 這裡不再 setInterval 強制全刷新，而是依賴 snapshot 或手動觸發
+            // 如果需要賓客端也輪播，可以保留 setInterval
+            // setInterval(() => { if (allPhotos.length > 0) rotatePhotos(allPhotos); }, 60000); 
+
+            function rotatePhotos(allPhotos) {
                 container.innerHTML = '';
                 physicsObjects = [];
                 const count = Math.min(allPhotos.length, 8);
+                const batch = [...allPhotos].sort(() => 0.5 - Math.random()).slice(0, count);
                 containerBounds = container.getBoundingClientRect();
                 
-                allPhotos.slice(0, count).forEach(photo => {
+                batch.forEach(photo => {
                     const el = document.createElement('div');
                     el.className = 'physics-item';
                     el.innerHTML = `<img src="${photo.imageUrl}"><div class="msg-tag">${photo.message || "Happy Wedding!"}</div>`;
                     container.appendChild(el);
+                    const size = 80;
                     physicsObjects.push({
-                        el: el, x: Math.random()*(containerBounds.width-80), y: Math.random()*(containerBounds.height-80),
-                        vx: (Math.random()-0.5)*0.8, vy: (Math.random()-0.5)*0.8
+                        el: el,
+                        x: Math.random() * (containerBounds.width - size),
+                        y: Math.random() * (containerBounds.height - size),
+                        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+                        radius: size / 2
                     });
                 });
-            });
+            }
 
             function updatePhysics() {
                 containerBounds = container.getBoundingClientRect();
+                const size = 80;
                 physicsObjects.forEach(obj => {
                     obj.x += obj.vx; obj.y += obj.vy;
-                    if(obj.x<=0 || obj.x>=containerBounds.width-80) obj.vx*=-1;
-                    if(obj.y<=0 || obj.y>=containerBounds.height-80) obj.vy*=-1;
-                    obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`;
+                    if (obj.x <= 0 || obj.x >= containerBounds.width - size) obj.vx *= -1;
+                    if (obj.y <= 0 || obj.y >= containerBounds.height - size) obj.vy *= -1;
                 });
+                for (let i = 0; i < physicsObjects.length; i++) {
+                    for (let j = i + 1; j < physicsObjects.length; j++) {
+                        const p1 = physicsObjects[i], p2 = physicsObjects[j];
+                        const dx = (p2.x) - (p1.x), dy = (p2.y) - (p1.y);
+                        const dist = Math.sqrt(dx*dx + dy*dy);
+                        if (dist < 85) {
+                            const tx = p1.vx; p1.vx = p2.vx; p2.vx = tx;
+                            const ty = p1.vy; p1.vy = p2.vy; p2.vy = ty;
+                        }
+                    }
+                }
+                physicsObjects.forEach(obj => { obj.el.style.transform = `translate(${obj.x}px, ${obj.y}px)`; });
                 requestAnimationFrame(updatePhysics);
             }
             updatePhysics();
@@ -340,7 +384,7 @@
             document.getElementById('photo-input').onchange = (e) => handleUpload(e.target.files[0]);
         }
 
-        // --- 大螢幕邏輯 (含抽獎監聽) ---
+        // --- 大螢幕邏輯 ---
         function showDashboard() {
             document.getElementById('dashboard-view').classList.remove('hidden');
             const wall = document.getElementById('wall-container');
@@ -350,6 +394,25 @@
             
             let allPhotos = [];
             let isCycleStarted = false;
+
+            // 星空背景生成函數
+            function createStarrySky() {
+                const bg = document.getElementById('dashboard-stars');
+                bg.innerHTML = ''; // 清空
+                for(let i=0; i<100; i++) {
+                    const star = document.createElement('div');
+                    star.className = 'bg-star';
+                    const size = Math.random() * 3 + 1; // 1px ~ 4px
+                    star.style.width = `${size}px`;
+                    star.style.height = `${size}px`;
+                    star.style.left = `${Math.random() * 100}%`;
+                    star.style.top = `${Math.random() * 100}%`;
+                    star.style.animationDuration = `${Math.random() * 3 + 2}s`; // 2s ~ 5s
+                    star.style.animationDelay = `${Math.random() * 5}s`;
+                    bg.appendChild(star);
+                }
+            }
+            createStarrySky(); // 啟動星空
 
             // 1. 監聽照片
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
@@ -366,12 +429,10 @@
                 const data = docSnap.data();
                 
                 if (data.status === 'drawing') {
-                    // 開始抽獎動畫 (拉霸機效果)
                     drawOverlay.style.display = 'flex';
-                    drawOverlay.classList.add('shuffling'); // 加入震動動畫
-                    winnerCards.forEach(card => card.classList.remove('reveal')); // 隱藏卡片內容
+                    drawOverlay.classList.add('shuffling'); 
+                    winnerCards.forEach(card => card.classList.remove('reveal'));
                     
-                    // 模擬快速切換照片
                     let shuffleInterval = setInterval(() => {
                         winnerCards.forEach(card => {
                             const randomPhoto = allPhotos[Math.floor(Math.random() * allPhotos.length)];
@@ -379,19 +440,14 @@
                         });
                     }, 100);
 
-                    // 5秒後顯示結果 (這裡雖然資料庫可能已經有結果，但我們延遲顯示製造氣氛)
                     setTimeout(() => {
                         clearInterval(shuffleInterval);
                         drawOverlay.classList.remove('shuffling');
-                        
-                        // 填入真正的得獎者
                         if (data.winners && data.winners.length === 3) {
                             data.winners.forEach((w, i) => {
                                 const card = document.getElementById(`winner-${i+1}`);
                                 card.querySelector('img').src = w.imageUrl;
                                 card.querySelector('.winner-msg').innerText = w.message || "Lucky Winner!";
-                                
-                                // 依序彈出
                                 setTimeout(() => {
                                     card.classList.add('reveal');
                                     if(i===2) confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
@@ -401,7 +457,7 @@
                     }, 5000);
 
                 } else if (data.status === 'idle') {
-                    drawOverlay.style.display = 'none'; // 關閉抽獎畫面
+                    drawOverlay.style.display = 'none';
                     winnerCards.forEach(card => card.classList.remove('reveal'));
                 }
             });
@@ -422,10 +478,12 @@
                     const card = document.createElement('div');
                     card.className = `wall-card`; 
                     const size = Math.random()*120 + 320; 
-                    const left = (index%4) * 25 + (Math.random()*10-5); 
-                    const top = Math.floor(index/4) * 40 + (Math.random()*20+5);
-                    const rotate = (Math.random()*16 - 8);
-                    const mx = (Math.random()*60-30)+'px', my = (Math.random()*60-30)+'px';
+                    const col = index % 4;
+                    const row = Math.floor(index / 4);
+                    const left = col * 25 + (Math.random() * 10 - 5); 
+                    const top = row * 40 + (Math.random() * 20 + 5);
+                    const rotate = (Math.random() * 16 - 8);
+                    const mx = (Math.random() * 60 - 30)+'px', my = (Math.random()*60-30)+'px';
                     
                     card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
                     card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
@@ -438,7 +496,7 @@
             }
         }
 
-        // --- 管理後台 (含抽獎邏輯) ---
+        // --- 管理後台 ---
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
@@ -452,23 +510,16 @@
                     alert("照片數量不足 3 張，無法抽獎！");
                     return;
                 }
-
-                // 隨機選 3 張不重複
                 const shuffled = photos.sort(() => 0.5 - Math.random());
                 const winners = shuffled.slice(0, 3);
-
-                // 寫入資料庫觸發大螢幕
                 await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
-                    status: 'drawing',
-                    winners: winners,
-                    timestamp: Date.now()
+                    status: 'drawing', winners: winners, timestamp: Date.now()
                 });
             };
 
             window.resetDraw = async () => {
                 await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
-                    status: 'idle',
-                    timestamp: Date.now()
+                    status: 'idle', timestamp: Date.now()
                 });
             };
 
