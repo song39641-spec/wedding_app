@@ -11,7 +11,18 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@700&display=swap');
 
-        body { font-family: 'Noto Serif TC', serif; background-color: #0c0c0c; color: white; overflow: hidden; }
+        /* 修正 1: 移除 body 的 overflow: hidden，改為預設允許捲動 */
+        body { 
+            font-family: 'Noto Serif TC', serif; 
+            background-color: #fdfaf6; 
+            color: #333; 
+            overflow-x: hidden; /* 只隱藏水平捲軸 */
+            min-height: 100vh;
+        }
+        
+        /* 特殊模式：大螢幕播放時鎖定捲軸 */
+        body.locked { overflow: hidden; background-color: #0c0c0c; }
+
         .gradient-bg { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
         
         /* 賓客端漂浮小照片 */
@@ -43,28 +54,18 @@
             transition: all 1.5s cubic-bezier(0.23, 1, 0.32, 1);
             animation: dynamic-drift 12s ease-in-out infinite;
             z-index: 10; display: flex; flex-direction: column;
-            opacity: 0; transform: scale(0.5); 
+            opacity: 0; transform: scale(0.5); /* 初始狀態 */
             max-width: 280px;
         }
-        .wall-card.active { opacity: 1; transform: scale(1); } 
+        .wall-card.active { opacity: 1; transform: scale(1); } /* 進場狀態 */
         
         .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 12px; background-color: #f3f4f6;}
         
         .card-message {
-            color: #444; font-family: 'Caveat', serif;
+            color: #444; font-family: 'Caveat', serif; /* 手寫體 */
             font-size: 1.5rem; line-height: 1.2; text-align: center;
             min-height: 1.2em; display: flex; align-items: center; justify-content: center;
             word-break: break-all; font-weight: 700;
-        }
-
-        /* 星空背景特效 */
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
-        }
-        .bg-star {
-            position: absolute; background: white; border-radius: 50%;
-            animation: twinkle infinite ease-in-out;
         }
 
         /* 抽獎模式樣式 */
@@ -73,39 +74,51 @@
             background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
             flex-direction: column; align-items: center; justify-content: center;
         }
+        
+        /* 修正 2: 抽獎標題響應式 */
         #draw-title {
-            font-size: 4rem; color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
+            font-size: 3rem; 
+            color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
             margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em;
+            text-align: center;
         }
-        .winners-grid { display: flex; gap: 40px; justify-content: center; align-items: center; }
+        @media (min-width: 768px) { #draw-title { font-size: 5rem; } }
+
+        /* 修正 3: 得獎卡片響應式 (手機變直排, 電腦橫排) */
+        .winners-grid { 
+            display: flex; flex-direction: column; gap: 20px; 
+            justify-content: center; align-items: center; width: 100%; padding: 20px;
+        }
+        @media (min-width: 768px) { .winners-grid { flex-direction: row; gap: 40px; } }
+
         .winner-card {
-            background: white; padding: 20px 20px 60px 20px; border-radius: 8px;
+            background: white; padding: 15px 15px 50px 15px; border-radius: 8px;
             transform: scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             box-shadow: 0 0 50px rgba(255,215,0, 0.5); border: 4px solid gold;
-            width: 350px; position: relative;
+            width: 100%; max-width: 350px; position: relative;
         }
         .winner-card.reveal { transform: scale(1); }
         .winner-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; }
         .winner-rank {
-            position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+            position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
             background: gold; color: #d32f2f; font-weight: bold; padding: 5px 20px;
-            border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-size: 1.2rem;
+            border-radius: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); font-size: 1rem;
             white-space: nowrap; z-index: 20;
         }
         .winner-msg {
-            position: absolute; bottom: 15px; left: 0; right: 0; text-align: center;
-            color: #333; font-family: 'Caveat', serif; font-size: 1.8rem; font-weight: bold;
+            position: absolute; bottom: 10px; left: 0; right: 0; text-align: center;
+            color: #333; font-family: 'Caveat', serif; font-size: 1.5rem; font-weight: bold;
         }
 
-        /* 滾動動畫 */
         @keyframes slot-machine {
-            0% { transform: translateY(-10px); opacity: 0.5; }
-            50% { transform: translateY(10px); opacity: 1; }
-            100% { transform: translateY(-10px); opacity: 0.5; }
+            0% { transform: translateY(-5px); opacity: 0.5; }
+            50% { transform: translateY(5px); opacity: 1; }
+            100% { transform: translateY(-5px); opacity: 0.5; }
         }
         .shuffling .winner-card { animation: slot-machine 0.1s infinite; border-color: #fff; box-shadow: none; }
 
         #custom-modal { display: none; }
+        
         .message-input {
             background: #fff; border: 2px solid #eee;
             color: #333; font-family: 'Noto Serif TC', serif;
@@ -129,23 +142,24 @@
         </div>
     </div>
 
-    <!-- 賓客介面 -->
-    <div id="guest-view" class="hidden w-full max-w-md mx-auto px-6 py-8 bg-[#fdfaf6] min-h-screen text-gray-800 flex flex-col overflow-y-auto">
+    <!-- 賓客介面 (修正：使用 min-h-screen 確保內容可捲動) -->
+    <div id="guest-view" class="hidden w-full max-w-md mx-auto px-6 py-8 flex flex-col">
         <header class="text-center mb-6">
             <h1 class="text-3xl font-bold text-gray-800 font-serif tracking-widest">Wedding Moments</h1>
             <p class="text-pink-400 text-xs font-bold tracking-[0.3em] mt-1 uppercase">Share Your Love</p>
         </header>
 
         <div class="bg-white p-6 rounded-[2rem] shadow-xl border border-white mb-6 relative z-10">
-            
-            <!-- 拍照任務提示區 -->
+            <!-- 拍照任務 -->
             <div class="mb-6 rounded-2xl border border-pink-200 bg-pink-50 p-4 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 w-20 h-20 bg-pink-100 rounded-full opacity-50"></div>
                 <div class="flex items-center justify-between relative z-10">
                     <div class="text-left pr-2">
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
-                            請拿起桌上的<br><span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>拍張可愛自拍吧！
+                            請拿起桌上的<br>
+                            <span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>
+                            拍張可愛自拍吧！
                         </p>
                     </div>
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
@@ -169,7 +183,8 @@
         </div>
 
         <div id="status-msg" class="text-center text-sm font-medium text-pink-600 mb-4 h-6"></div>
-        <div class="flex-1 relative w-full min-h-[300px]">
+        
+        <div class="flex-1 relative w-full min-h-[350px] mb-8">
             <div class="flex justify-between items-center mb-2 px-4">
                 <h3 class="text-gray-400 text-xs font-bold tracking-widest">LIVE POOL</h3>
                 <span class="text-[10px] text-gray-400 bg-white border border-gray-100 px-2 py-1 rounded-full">即時更新</span>
@@ -178,16 +193,17 @@
         </div>
     </div>
 
-    <!-- 大螢幕播放 -->
-    <!-- 更新：背景改為深藍色漸層，模擬夜空 -->
+    <!-- 大螢幕播放 (Dashboard Mode) -->
+    <!-- 修正 4: Dashboard 模式維持 fixed 滿版且隱藏卷軸 -->
     <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
         
         <!-- 星空背景容器 -->
         <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
 
         <div class="absolute bottom-10 left-10 z-[50] text-white opacity-50 font-serif pointer-events-none">
-            <p class="text-7xl font-bold tracking-widest">BLESSINGS</p>
-            <p class="text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
+            <!-- 修正 5: 標題響應式大小 -->
+            <p class="text-5xl md:text-7xl font-bold tracking-widest">BLESSINGS</p>
+            <p class="text-lg md:text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
         </div>
         
         <div id="empty-state" class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
@@ -219,19 +235,19 @@
         </div>
     </div>
 
-    <!-- 管理端 -->
-    <div id="admin-view" class="hidden w-full max-w-4xl mx-auto px-6 py-12 bg-white min-h-screen text-gray-800">
-        <div class="flex justify-between items-center mb-8 border-b pb-4">
+    <!-- 管理端 (修正 6: 確保可以捲動) -->
+    <div id="admin-view" class="hidden w-full max-w-4xl mx-auto px-6 py-12 text-gray-800 pb-20">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-8 border-b border-gray-200 pb-4 gap-4">
             <div>
-                <h2 class="text-2xl font-bold font-serif text-gray-800">照片管理後台</h2>
+                <h2 class="text-2xl font-bold font-serif text-red-600">照片管理後台</h2>
                 <p id="photo-count" class="text-gray-500 text-sm">統計中...</p>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2 justify-center">
                 <button onclick="window.startDraw()" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:opacity-90 transform active:scale-95 transition-all">
                     🎰 抽出 3 位幸運兒
                 </button>
                 <button onclick="window.resetDraw()" class="bg-gray-200 text-gray-600 font-bold py-2 px-4 rounded-full hover:bg-gray-300">
-                    🔄 清除畫面
+                    🔄 清除抽獎
                 </button>
             </div>
         </div>
@@ -261,9 +277,15 @@
         onAuthStateChanged(auth, (user) => {
             if (!user) { signInAnonymously(auth); return; }
             document.getElementById('loading').classList.add('hidden');
-            if (mode === 'admin') showAdmin();
-            else if (mode === 'dashboard') showDashboard();
-            else showGuest();
+            
+            if (mode === 'admin') {
+                showAdmin();
+            } else if (mode === 'dashboard') {
+                document.body.classList.add('locked'); // 鎖定 Dashboard 捲軸
+                showDashboard();
+            } else {
+                showGuest();
+            }
         });
 
         window.showMessage = (title, body) => {
@@ -314,9 +336,14 @@
                 }
             });
 
-            // 這裡不再 setInterval 強制全刷新，而是依賴 snapshot 或手動觸發
-            // 如果需要賓客端也輪播，可以保留 setInterval
-            // setInterval(() => { if (allPhotos.length > 0) rotatePhotos(allPhotos); }, 60000); 
+            setInterval(() => {
+                // 每分鐘更新一次賓客端的預覽池 (重新抓取)
+                getDocs(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)))
+                .then(s => {
+                    const photos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                    if (photos.length > 0) rotatePhotos(photos);
+                });
+            }, 60000); 
 
             function rotatePhotos(allPhotos) {
                 container.innerHTML = '';
@@ -398,21 +425,21 @@
             // 星空背景生成函數
             function createStarrySky() {
                 const bg = document.getElementById('dashboard-stars');
-                bg.innerHTML = ''; // 清空
+                bg.innerHTML = ''; 
                 for(let i=0; i<100; i++) {
                     const star = document.createElement('div');
                     star.className = 'bg-star';
-                    const size = Math.random() * 3 + 1; // 1px ~ 4px
+                    const size = Math.random() * 3 + 1; 
                     star.style.width = `${size}px`;
                     star.style.height = `${size}px`;
                     star.style.left = `${Math.random() * 100}%`;
                     star.style.top = `${Math.random() * 100}%`;
-                    star.style.animationDuration = `${Math.random() * 3 + 2}s`; // 2s ~ 5s
+                    star.style.animationDuration = `${Math.random() * 3 + 2}s`; 
                     star.style.animationDelay = `${Math.random() * 5}s`;
                     bg.appendChild(star);
                 }
             }
-            createStarrySky(); // 啟動星空
+            createStarrySky();
 
             // 1. 監聽照片
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
@@ -423,11 +450,10 @@
                 }
             });
 
-            // 2. 監聽抽獎狀態
+            // 2. 監聽抽獎
             onSnapshot(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), (docSnap) => {
                 if (!docSnap.exists()) return;
                 const data = docSnap.data();
-                
                 if (data.status === 'drawing') {
                     drawOverlay.style.display = 'flex';
                     drawOverlay.classList.add('shuffling'); 
@@ -455,7 +481,6 @@
                             });
                         }
                     }, 5000);
-
                 } else if (data.status === 'idle') {
                     drawOverlay.style.display = 'none';
                     winnerCards.forEach(card => card.classList.remove('reveal'));
@@ -472,11 +497,14 @@
 
                 const count = Math.min(allPhotos.length, 8);
                 const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
-                const displaySet = [...sorted.slice(0, 4), ...sorted.slice(4).sort(()=>0.5-Math.random())].slice(0, count);
+                const recent = sorted.slice(0, 4);
+                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
+                const displaySet = [...recent, ...others].slice(0, 8);
 
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
                     card.className = `wall-card`; 
+                    
                     const size = Math.random()*120 + 320; 
                     const col = index % 4;
                     const row = Math.floor(index / 4);
@@ -501,15 +529,10 @@
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
             
-            // 抽獎邏輯
             window.startDraw = async () => {
                 const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
                 const photos = snapshot.docs.map(d => d.data());
-                
-                if (photos.length < 3) {
-                    alert("照片數量不足 3 張，無法抽獎！");
-                    return;
-                }
+                if (photos.length < 3) { alert("照片數量不足 3 張，無法抽獎！"); return; }
                 const shuffled = photos.sort(() => 0.5 - Math.random());
                 const winners = shuffled.slice(0, 3);
                 await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
