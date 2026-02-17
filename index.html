@@ -52,23 +52,17 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; margin-top: -5px; z-index: 2;
         }
 
-        /* --- Dashboard 動畫系統 (重構) --- */
-        
-        /* 1. 外層容器：負責位置漂流 (Translate) */
+        /* --- Dashboard 動畫系統 --- */
         @keyframes wall-drift {
             0% { transform: translate(0, 0); }
             50% { transform: translate(var(--mx), var(--my)); }
             100% { transform: translate(0, 0); }
         }
-
-        /* 2. 內層卡片：負責整體搖擺 (Rotate) */
         @keyframes wall-swing {
-            0% { transform: rotate(calc(var(--r) - 3deg)); }
-            50% { transform: rotate(calc(var(--r) + 3deg)); }
-            100% { transform: rotate(calc(var(--r) - 3deg)); }
+            0% { transform: rotate(calc(var(--r) - 1deg)); }
+            50% { transform: rotate(calc(var(--r) + 1deg)); }
+            100% { transform: rotate(calc(var(--r) - 1deg)); }
         }
-
-        /* 3. 進場彈跳 */
         @keyframes pop-in {
             0% { opacity: 0; transform: scale(0.3) translateY(50px); }
             50% { transform: scale(1.05); }
@@ -76,51 +70,29 @@
             100% { opacity: 1; transform: scale(1); }
         }
 
-        /* 外層包裝：負責定位與漂流 */
         .wall-wrapper {
-            position: absolute;
-            z-index: 10;
-            opacity: 0; /* 初始隱藏 */
-            animation: wall-drift 12s ease-in-out infinite; /* 持續漂流 */
-            transition: opacity 1s ease-in-out; /* 淡入淡出用 */
+            position: absolute; z-index: 10; opacity: 0;
+            animation: wall-drift 12s ease-in-out infinite;
+            transition: opacity 1s ease-in-out;
         }
-
-        /* 進場時觸發 */
-        .wall-wrapper.active {
-            opacity: 1;
-            /* 這裡我們不對 wrapper 做 transform 動畫以免衝突，改用 JS 控制 class 或內層動畫 */
-        }
+        .wall-wrapper.active { opacity: 1; }
         
-        /* 內層卡片：負責外觀與搖擺 */
         .wall-card {
-            background: white; 
-            padding: 12px 12px 16px 12px;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.3); 
-            border-radius: 8px;
-            display: flex; 
-            flex-direction: column;
-            max-width: 280px;
-            /* 搖擺動畫應用在整個卡片上 */
-            animation: wall-swing 4s ease-in-out infinite;
-            transform-origin: center center; /* 從中心搖擺 */
+            background: white; padding: 12px 12px 16px 12px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.3); border-radius: 8px;
+            display: flex; flex-direction: column; max-width: 280px;
+            animation: wall-swing 6s ease-in-out infinite;
+            transform-origin: center center;
         }
-        
-        /* 進場時的彈跳動畫應用在卡片上 */
         .wall-wrapper.active .wall-card {
             animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards,
-                       wall-swing 4s ease-in-out infinite 0.6s; /* 彈完後接續搖擺 */
+                       wall-swing 6s ease-in-out infinite 0.6s;
         }
-
         @media (min-width: 768px) { .wall-card { max-width: 320px; padding: 16px 16px 20px 16px; border-radius: 12px; } }
         
-        .wall-card img { 
-            width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;
-            /* 移除圖片獨立動畫，現在跟著卡片一起動 */
-        }
-        
+        .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6; }
         .card-message {
-            color: #444; font-family: 'Caveat', serif;
-            font-size: 1.5rem; line-height: 1.2; text-align: center;
+            color: #444; font-family: 'Caveat', serif; font-size: 1.5rem; line-height: 1.2; text-align: center;
             min-height: 1.2em; display: flex; align-items: center; justify-content: center;
             word-break: break-all; font-weight: 700;
         }
@@ -143,10 +115,8 @@
         }
         
         #draw-title {
-            font-size: 3rem; 
-            color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
-            margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em;
-            text-align: center;
+            font-size: 3rem; color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
+            margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em; text-align: center;
         }
         @media (min-width: 768px) { #draw-title { font-size: 5rem; } }
 
@@ -190,6 +160,15 @@
         .message-input:focus { outline: none; border-color: #fbc2eb; background: white; }
         
         .app-logo { animation: mobile-float 6s ease-in-out infinite; }
+        
+        /* 音效開關按鈕 */
+        #audio-toggle {
+            position: absolute; bottom: 20px; right: 20px; z-index: 60;
+            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
+            color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer;
+            backdrop-filter: blur(5px); transition: all 0.3s;
+        }
+        #audio-toggle:hover { background: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -250,8 +229,8 @@
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
                             請拿起桌上的<br>
-                            <span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>
-                            拍張可愛自拍吧！
+                            <span class="text-pink-600 text-lg">應援手燈</span> 🪄<br>
+                            拍張可愛自拍吧！下方留下給我們的祝福唷!
                         </p>
                     </div>
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
@@ -289,12 +268,15 @@
     <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
         <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
 
-        <!-- Dashboard Logo 與標題 (z-index 0) -->
-        <div class="absolute bottom-10 left-10 z-0 text-white opacity-80 font-serif pointer-events-none flex items-center gap-6">
-            <img src="logo.jpg" onerror="this.style.display='none'" class="w-32 h-32 rounded-full border-4 border-white/30 shadow-2xl object-cover animate-pulse">
-            <div>
-                <p class="text-5xl md:text-7xl font-bold tracking-widest text-shadow-lg">BLESSINGS</p>
-                <p class="text-lg md:text-xl tracking-[0.8em] mt-2 uppercase text-pink-200">Capture the Love</p>
+        <!-- 音效開關 -->
+        <button id="audio-toggle">🔊 開啟音效</button>
+
+        <!-- Dashboard Logo -->
+        <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-0 text-white opacity-70 font-serif pointer-events-none flex flex-col items-center gap-2">
+            <img src="logo.jpg" onerror="this.style.display='none'" class="w-16 h-16 rounded-full border-2 border-white/30 shadow-lg object-cover animate-pulse">
+            <div class="text-center">
+                <p class="text-xl md:text-2xl font-bold tracking-widest text-shadow-md">BLESSINGS</p>
+                <p class="text-xs md:text-sm tracking-[0.4em] uppercase text-pink-200">Capture the Love</p>
             </div>
         </div>
         
@@ -380,6 +362,55 @@
             }
         });
 
+        // --- 音效控制器 (Web Audio API) ---
+        const AudioController = {
+            ctx: null,
+            init: function() {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.ctx = new AudioContext();
+            },
+            // 拉霸機聲音 (短促的滴答聲)
+            playTick: function() {
+                if (!this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(800, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.05);
+                
+                gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
+                
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            },
+            // 中獎音效 (大三和弦)
+            playWin: function() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                // C Major Chord: C5, E5, G5, C6
+                [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.value = freq;
+                    
+                    gain.gain.setValueAtTime(0, now + i*0.1);
+                    gain.gain.linearRampToValueAtTime(0.2, now + i*0.1 + 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + i*0.1 + 1.5);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i*0.1);
+                    osc.stop(now + i*0.1 + 1.5);
+                });
+            }
+        };
+
         window.showMessage = (title, body) => {
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-body').innerText = body;
@@ -434,6 +465,7 @@
 
             onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
                 const allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                // 只更新資料，不重建DOM，除非DOM是空的
                 if (container.children.length === 0 && allPhotos.length > 0) {
                     rotatePhotos(allPhotos);
                 }
@@ -491,7 +523,8 @@
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64, message: message, timestamp: Date.now()
                     });
-                    status.innerText = "上傳成功！"; msgInput.value = ""; document.getElementById('photo-input').value = ''; pendingFile = null;
+                    status.innerText = "上傳成功！感謝您的祝福";
+                    msgInput.value = ""; document.getElementById('photo-input').value = ''; pendingFile = null;
                 } catch (e) { showMessage("上傳失敗", e.message); status.innerText = ""; } 
                 finally { setTimeout(() => status.innerText = "", 3000); }
             };
@@ -507,6 +540,16 @@
             const emptyState = document.getElementById('empty-state');
             const drawOverlay = document.getElementById('draw-overlay');
             const winnerCards = document.querySelectorAll('.winner-card');
+            
+            // 音效開關邏輯
+            const audioBtn = document.getElementById('audio-toggle');
+            audioBtn.onclick = () => {
+                AudioController.init();
+                // 播放一個短音確認
+                AudioController.playTick();
+                audioBtn.innerText = "🔊 音效已開啟";
+                setTimeout(() => audioBtn.style.opacity = '0.3', 2000);
+            };
             
             let allPhotos = [];
             let isCycleStarted = false;
@@ -542,12 +585,17 @@
                     drawOverlay.style.display = 'flex';
                     drawOverlay.classList.add('shuffling'); 
                     winnerCards.forEach(card => card.classList.remove('reveal'));
+                    
                     let shuffleInterval = setInterval(() => {
+                        // 播放拉霸音效
+                        AudioController.playTick();
+                        
                         winnerCards.forEach(card => {
                             const randomPhoto = allPhotos[Math.floor(Math.random() * allPhotos.length)];
                             if(randomPhoto) card.querySelector('img').src = randomPhoto.imageUrl;
                         });
                     }, 100);
+
                     setTimeout(() => {
                         clearInterval(shuffleInterval);
                         drawOverlay.classList.remove('shuffling');
@@ -558,6 +606,8 @@
                                 card.querySelector('.winner-msg').innerText = w.message || "Lucky Winner!";
                                 setTimeout(() => {
                                     card.classList.add('reveal');
+                                    // 播放中獎音效
+                                    AudioController.playWin();
                                     if(i===2) confetti({ particleCount: 200, spread: 100, origin: { y: 0.6 } });
                                 }, i * 800);
                             });
@@ -576,35 +626,29 @@
                     child.classList.remove('active'); 
                     setTimeout(() => child.remove(), 1200);
                 });
-                
-                const isMobile = window.innerWidth < 768;
-                const cols = isMobile ? 2 : 4; 
-                const count = Math.min(allPhotos.length, isMobile ? 4 : 8); 
-                const cardBaseSize = isMobile ? 140 : 280;
-                const sizeVar = isMobile ? 40 : 80;
 
+                const count = Math.min(allPhotos.length, 8);
                 const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
-                const recent = sorted.slice(0, count/2);
-                const others = sorted.slice(count/2).sort(() => 0.5 - Math.random());
+                const recent = sorted.slice(0, 4);
+                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
                 const displaySet = [...recent, ...others].slice(0, count);
 
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
                     card.className = `wall-wrapper`; 
                     
-                    const size = Math.random() * sizeVar + cardBaseSize; 
-                    const col = index % cols;
-                    const row = Math.floor(index / cols);
+                    const size = Math.random() * 40 + 280; 
+                    const col = index % 4;
+                    const row = Math.floor(index / 4);
                     
-                    const colWidth = 100 / cols;
-                    const rowHeight = isMobile ? 40 : 40; 
+                    const colWidth = 100 / 4;
+                    const rowHeight = 40; 
                     const left = col * colWidth + (Math.random() * 5); 
                     const top = row * rowHeight + (Math.random() * 10 + 5);
                     const rotate = (Math.random() * 16 - 8);
                     const mx = (Math.random() * 60 - 30)+'px', my = (Math.random()*60-30)+'px';
                     
-                    card.style.width = `${size}px`; 
-                    card.style.left = `${left}%`; card.style.top = `${top}%`;
+                    card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
                     card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
                     card.style.zIndex = index;
                     
@@ -615,9 +659,7 @@
                         </div>
                     `;
                     wall.appendChild(card);
-                    
-                    // 讓 wrapper 進場
-                    setTimeout(() => card.classList.add('active'), index * 150 + 50);
+                    setTimeout(() => card.classList.add('active'), index * 100 + 50);
                 });
             }
         }
