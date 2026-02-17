@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wedding Moments - 婚禮相片分享</title>
-    <!-- 引入彩帶特效庫 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -20,57 +19,81 @@
         }
         
         body.locked { overflow: hidden; background-color: #0c0c0c; }
-
         .gradient-bg { background: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); }
         
-        /* 賓客端漂浮小照片 */
-        .physics-item {
-            position: absolute; display: flex; flex-direction: column; align-items: center;
-            will-change: transform; z-index: 10; width: 80px; height: 80px; user-select: none;
+        /* --- 手機端優化：氣泡浮動動畫 --- */
+        @keyframes mobile-float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-15px) rotate(3deg); }
         }
-        .physics-item img {
-            width: 100%; height: 100%; border-radius: 50%; object-fit: cover;
-            border: 3px solid white; box-shadow: 0 5px 15px rgba(0,0,0,0.2); pointer-events: none;
+        
+        .floating-item {
+            position: absolute; 
+            display: flex; flex-direction: column; align-items: center;
+            width: 80px; 
+            animation: mobile-float 4s ease-in-out infinite; /* CSS 動畫取代 JS，更流暢 */
+            transition: opacity 0.5s;
         }
-        .physics-item .msg-tag {
-            position: absolute; bottom: -25px; background: rgba(255, 255, 255, 0.95);
+        
+        /* 為不同照片設定隨機延遲，看起來不要太整齊 */
+        .delay-0 { animation-delay: 0s; }
+        .delay-1 { animation-delay: -1s; }
+        .delay-2 { animation-delay: -2.5s; }
+        .delay-3 { animation-delay: -1.5s; }
+
+        .floating-item img {
+            width: 100%; height: 100%; aspect-ratio: 1/1; border-radius: 50%; object-fit: cover;
+            border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .floating-item .msg-tag {
+            background: rgba(255, 255, 255, 0.95);
             padding: 2px 8px; border-radius: 12px; font-size: 10px; color: #333;
             white-space: nowrap; max-width: 100px; overflow: hidden; text-overflow: ellipsis;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; pointer-events: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); font-weight: bold; margin-top: -5px; z-index: 2;
         }
 
-        /* 大螢幕牆面動畫 */
-        @keyframes dynamic-drift {
-            0% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
-            50% { transform: translate(var(--mx), var(--my)) rotate(calc(var(--r) + 2deg)) scale(1.02); }
-            100% { transform: translate(0, 0) rotate(var(--r)) scale(1); }
+        /* --- Dashboard 可愛風動畫 --- */
+        
+        /* 彈跳進場 */
+        @keyframes pop-in {
+            0% { opacity: 0; transform: scale(0.3) translateY(50px); }
+            50% { transform: scale(1.05); }
+            70% { transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        /* 活潑搖擺 */
+        @keyframes cute-sway {
+            0%, 100% { transform: rotate(-2deg); }
+            50% { transform: rotate(2deg); }
         }
 
         .wall-card {
             position: absolute; background: white; padding: 12px 12px 16px 12px;
-            box-shadow: 0 15px 45px rgba(0,0,0,0.3); border-radius: 4px;
-            transition: all 1.5s cubic-bezier(0.23, 1, 0.32, 1);
-            animation: dynamic-drift 12s ease-in-out infinite;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.3); border-radius: 8px;
             z-index: 10; display: flex; flex-direction: column;
-            opacity: 0; transform: scale(0.5); /* 初始狀態 */
+            opacity: 0; /* 初始隱藏 */
+            max-width: 280px;
+            transition: all 0.8s ease-in-out; /* 移動時的平滑過渡 */
         }
-        /* 響應式卡片寬度：預設(手機)較小，md(電腦)較大 */
-        .wall-card { max-width: 160px; }
-        @media (min-width: 768px) { .wall-card { max-width: 320px; padding: 16px 16px 20px 16px; } }
+        @media (min-width: 768px) { .wall-card { max-width: 320px; padding: 16px 16px 20px 16px; border-radius: 12px; } }
 
-        .wall-card.active { opacity: 1; transform: scale(1); }
+        .wall-card.active { 
+            animation: pop-in 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; /* 彈性貝茲曲線 */
+        }
         
-        .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 2px; margin-bottom: 8px; background-color: #f3f4f6;}
+        .wall-card:hover { transform: scale(1.1) rotate(0deg) !important; z-index: 50; } /* 滑鼠懸停放大 */
+
+        .wall-card img { width: 100%; aspect-ratio: 1/1; object-fit: cover; border-radius: 4px; margin-bottom: 8px; background-color: #f3f4f6;}
         
         .card-message {
             color: #444; font-family: 'Caveat', serif;
-            font-size: 1rem; line-height: 1.2; text-align: center;
+            font-size: 1.5rem; line-height: 1.2; text-align: center;
             min-height: 1.2em; display: flex; align-items: center; justify-content: center;
             word-break: break-all; font-weight: 700;
         }
-        @media (min-width: 768px) { .card-message { font-size: 1.5rem; } }
 
-        /* 星空背景特效 (已修復) */
+        /* 星空背景 */
         @keyframes twinkle {
             0%, 100% { opacity: 0.3; transform: scale(0.8); }
             50% { opacity: 1; transform: scale(1.2); box-shadow: 0 0 10px rgba(255, 255, 255, 0.8); }
@@ -86,21 +109,16 @@
             background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);
             flex-direction: column; align-items: center; justify-content: center;
         }
-        
         #draw-title {
-            font-size: 3rem; 
-            color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
-            margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em;
-            text-align: center;
+            font-size: 3rem; color: #fbc2eb; text-shadow: 0 0 20px rgba(251, 194, 235, 0.8);
+            margin-bottom: 2rem; font-weight: bold; letter-spacing: 0.2em; text-align: center;
         }
         @media (min-width: 768px) { #draw-title { font-size: 5rem; } }
-
         .winners-grid { 
             display: flex; flex-direction: column; gap: 20px; 
             justify-content: center; align-items: center; width: 100%; padding: 20px;
         }
         @media (min-width: 768px) { .winners-grid { flex-direction: row; gap: 40px; } }
-
         .winner-card {
             background: white; padding: 15px 15px 50px 15px; border-radius: 8px;
             transform: scale(0); transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -119,7 +137,6 @@
             position: absolute; bottom: 10px; left: 0; right: 0; text-align: center;
             color: #333; font-family: 'Caveat', serif; font-size: 1.5rem; font-weight: bold;
         }
-
         @keyframes slot-machine {
             0% { transform: translateY(-5px); opacity: 0.5; }
             50% { transform: translateY(5px); opacity: 1; }
@@ -128,22 +145,24 @@
         .shuffling .winner-card { animation: slot-machine 0.1s infinite; border-color: #fff; box-shadow: none; }
 
         #custom-modal, #confirm-modal { display: none; }
-        
         .message-input {
             background: #fff; border: 2px solid #eee;
             color: #333; font-family: 'Noto Serif TC', serif;
         }
         .message-input:focus { outline: none; border-color: #fbc2eb; background: white; }
+        
+        /* Logo 動畫 */
+        .app-logo { animation: float-mobile 6s ease-in-out infinite; }
     </style>
 </head>
 <body class="min-h-screen">
 
     <div id="loading" class="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black">
         <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-pink-500 mb-4"></div>
-        <p class="text-gray-400 text-sm">正在載入幸福魔法...</p>
+        <p class="text-gray-400 text-sm">Loading...</p>
     </div>
 
-    <!-- 一般訊息提示 -->
+    <!-- 訊息提示 -->
     <div id="custom-modal" class="fixed inset-0 z-[200] flex items-center justify-center bg-black/50 p-6 backdrop-blur-sm">
         <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center text-gray-800">
             <h3 id="modal-title" class="text-xl font-bold mb-2 font-serif">提示</h3>
@@ -156,7 +175,7 @@
     <div id="confirm-modal" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90 p-6 backdrop-blur-md">
         <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl flex flex-col items-center">
             <h3 class="text-xl font-bold text-gray-800 mb-2 font-serif">📷 確認上傳</h3>
-            <p class="text-gray-400 text-xs mb-4">請確認照片與祝福語是否正確</p>
+            <p class="text-gray-400 text-xs mb-4">請確認照片與祝福語</p>
             <div class="relative w-full rounded-xl overflow-hidden mb-4 shadow-inner bg-gray-100 border border-gray-200">
                 <img id="confirm-preview-img" src="" class="w-full h-auto object-contain max-h-[300px] bg-gray-50">
             </div>
@@ -175,13 +194,16 @@
     </div>
 
     <!-- 賓客介面 -->
-    <div id="guest-view" class="hidden w-full max-w-md mx-auto px-6 py-8 flex flex-col">
+    <div id="guest-view" class="hidden w-full max-w-md mx-auto px-6 py-8 flex flex-col min-h-screen">
         <header class="text-center mb-6">
+            <!-- 手機端 Logo -->
+            <img src="logo.jpg" onerror="this.style.display='none'" class="app-logo w-20 h-20 rounded-full border-4 border-white shadow-md mx-auto mb-3 object-cover">
             <h1 class="text-3xl font-bold text-gray-800 font-serif tracking-widest">Wedding Moments</h1>
             <p class="text-pink-400 text-xs font-bold tracking-[0.3em] mt-1 uppercase">Share Your Love</p>
         </header>
 
         <div class="bg-white p-6 rounded-[2rem] shadow-xl border border-white mb-6 relative z-10">
+            <!-- 拍照任務 -->
             <div class="mb-6 rounded-2xl border border-pink-200 bg-pink-50 p-4 shadow-sm relative overflow-hidden">
                 <div class="absolute -right-4 -top-4 w-20 h-20 bg-pink-100 rounded-full opacity-50"></div>
                 <div class="flex items-center justify-between relative z-10">
@@ -192,14 +214,16 @@
                         </p>
                     </div>
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
-                        <img src="instruction.jpg" onerror="this.src='https://placehold.co/100x140/pink/white?text=No+Image'" class="w-full h-full object-cover rounded-xl border-4 border-white shadow-md">
+                        <img src="instruction.jpg" onerror="this.src='https://placehold.co/100x140/pink/white?text=Img'" class="w-full h-full object-cover rounded-xl border-4 border-white shadow-md">
                     </div>
                 </div>
             </div>
+
             <div class="mb-6">
                 <label class="block text-gray-400 text-xs font-bold mb-2 ml-1">留下一句祝福 (選填)</label>
                 <textarea id="guest-message" rows="2" maxlength="20" placeholder="例如：新婚快樂！百年好合 ❤️" class="message-input w-full px-4 py-3 rounded-xl resize-none text-base shadow-sm"></textarea>
             </div>
+
             <div class="relative h-16 rounded-full gradient-bg shadow-lg flex items-center justify-center overflow-hidden active:scale-95 transition-transform cursor-pointer group">
                 <div class="flex items-center gap-2">
                     <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
@@ -208,8 +232,10 @@
                 <input type="file" id="photo-input" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer">
             </div>
         </div>
+
         <div id="status-msg" class="text-center text-sm font-medium text-pink-600 mb-4 h-6"></div>
-        <div class="flex-1 relative w-full min-h-[350px] mb-8">
+        
+        <div class="flex-1 relative w-full min-h-[300px] mb-8">
             <div class="flex justify-between items-center mb-2 px-4">
                 <h3 class="text-gray-400 text-xs font-bold tracking-widest">LIVE POOL</h3>
                 <span class="text-[10px] text-gray-400 bg-white border border-gray-100 px-2 py-1 rounded-full">即時更新</span>
@@ -220,13 +246,15 @@
 
     <!-- 大螢幕播放 (Dashboard Mode) -->
     <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
-        
-        <!-- 修復星空背景 -->
         <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
 
-        <div class="absolute bottom-10 left-10 z-[50] text-white opacity-50 font-serif pointer-events-none">
-            <p class="text-5xl md:text-7xl font-bold tracking-widest">BLESSINGS</p>
-            <p class="text-lg md:text-xl tracking-[0.8em] mt-2 uppercase">Capture the Love</p>
+        <!-- Dashboard Logo 與標題 -->
+        <div class="absolute bottom-10 left-10 z-[50] text-white opacity-80 font-serif pointer-events-none flex items-center gap-6">
+            <img src="logo.jpg" onerror="this.style.display='none'" class="w-32 h-32 rounded-full border-4 border-white/30 shadow-2xl object-cover animate-pulse">
+            <div>
+                <p class="text-5xl md:text-7xl font-bold tracking-widest text-shadow-lg">BLESSINGS</p>
+                <p class="text-lg md:text-xl tracking-[0.8em] mt-2 uppercase text-pink-200">Capture the Love</p>
+            </div>
         </div>
         
         <div id="empty-state" class="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
@@ -300,15 +328,11 @@
         onAuthStateChanged(auth, (user) => {
             if (!user) { signInAnonymously(auth); return; }
             document.getElementById('loading').classList.add('hidden');
-            
-            if (mode === 'admin') {
-                showAdmin();
-            } else if (mode === 'dashboard') {
-                document.body.classList.add('locked'); // 鎖定 Dashboard 捲軸
+            if (mode === 'admin') showAdmin();
+            else if (mode === 'dashboard') {
+                document.body.classList.add('locked');
                 showDashboard();
-            } else {
-                showGuest();
-            }
+            } else showGuest();
         });
 
         window.showMessage = (title, body) => {
@@ -318,7 +342,6 @@
         };
         window.closeModal = () => { document.getElementById('custom-modal').style.display = 'none'; };
         
-        // 關閉確認視窗並重置 input
         window.cancelUpload = () => {
             document.getElementById('confirm-modal').style.display = 'none';
             document.getElementById('photo-input').value = ''; 
@@ -357,43 +380,46 @@
             document.getElementById('guest-view').classList.remove('hidden');
             const container = document.getElementById('physics-container');
             const msgInput = document.getElementById('guest-message');
-            
-            // 監聽照片
+
+            const slots = [
+                {x: 5, y: 5}, {x: 35, y: 5}, {x: 65, y: 5},
+                {x: 5, y: 35}, {x: 35, y: 35}, {x: 65, y: 35},
+                {x: 5, y: 65}, {x: 35, y: 65}, {x: 65, y: 65}
+            ];
+
             onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
                 const allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
-                // 簡易重繪：若物理引擎已啟動，這裡僅作為資料源更新，不重新初始化以避免畫面閃爍
-                // 但為了簡單起見，這裡每分鐘會由 setInterval 觸發 rotatePhotos
-                if (container.children.length === 0 && allPhotos.length > 0) rotatePhotos(allPhotos);
+                // 只更新資料，不重建DOM，除非DOM是空的
+                if (container.children.length === 0 && allPhotos.length > 0) {
+                    rotatePhotos(allPhotos);
+                }
             });
 
-            // 讓手機端也偶爾換換照片，保持新鮮感
+            // 手機端輪播：1分鐘
             setInterval(() => {
-                 getDocs(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)))
+                getDocs(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)))
                 .then(s => {
                     const photos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                     if (photos.length > 0) rotatePhotos(photos);
                 });
-            }, 60000); 
+            }, 60000);
 
             function rotatePhotos(allPhotos) {
                 container.innerHTML = '';
-                const count = Math.min(allPhotos.length, 8);
+                const count = Math.min(allPhotos.length, 9);
                 const batch = [...allPhotos].sort(() => 0.5 - Math.random()).slice(0, count);
-                const bounds = container.getBoundingClientRect();
-                
-                batch.forEach((photo, i) => {
+
+                batch.forEach((photo, index) => {
+                    const slot = slots[index];
+                    const left = slot.x + (Math.random() * 10 - 5);
+                    const top = slot.y + (Math.random() * 10 - 5);
+                    const delay = `delay-${index % 4}`;
+
                     const el = document.createElement('div');
-                    el.className = 'physics-item';
+                    el.className = `floating-item ${delay}`;
+                    el.style.left = `${left}%`;
+                    el.style.top = `${top}%`;
                     el.innerHTML = `<img src="${photo.imageUrl}"><div class="msg-tag">${photo.message || "Happy Wedding!"}</div>`;
-                    
-                    // 簡單隨機分佈
-                    const x = Math.random() * (bounds.width - 80);
-                    const y = Math.random() * (bounds.height - 80);
-                    el.style.left = `${x}px`;
-                    el.style.top = `${y}px`;
-                    
-                    // 隨機動畫時序
-                    el.style.animationDelay = `-${Math.random()*5}s`;
                     container.appendChild(el);
                 });
             }
@@ -416,21 +442,15 @@
                 document.getElementById('confirm-modal').style.display = 'none';
                 const status = document.getElementById('status-msg');
                 const message = msgInput.value.trim() || "Happy Wedding! ❤️";
-                
                 status.innerText = "照片處理上傳中...";
                 try {
                     let b64 = await aggressiveResize(pendingFile); 
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64, message: message, timestamp: Date.now()
                     });
-                    status.innerText = "上傳成功！感謝您的祝福";
-                    msgInput.value = ""; 
-                    document.getElementById('photo-input').value = ''; 
-                    pendingFile = null;
-                } catch (e) {
-                    showMessage("上傳失敗", e.message);
-                    status.innerText = "";
-                } finally { setTimeout(() => status.innerText = "", 3000); }
+                    status.innerText = "上傳成功！"; msgInput.value = ""; document.getElementById('photo-input').value = ''; pendingFile = null;
+                } catch (e) { showMessage("上傳失敗", e.message); status.innerText = ""; } 
+                finally { setTimeout(() => status.innerText = "", 3000); }
             };
 
             document.getElementById('photo-input').onchange = (e) => verifySelection(e.target.files[0]);
@@ -448,7 +468,6 @@
             let allPhotos = [];
             let isCycleStarted = false;
 
-            // 星空背景生成 (修復)
             function createStarrySky() {
                 const bg = document.getElementById('dashboard-stars');
                 bg.innerHTML = ''; 
@@ -515,10 +534,9 @@
                     setTimeout(() => child.remove(), 1200);
                 });
                 
-                // 響應式邏輯：偵測寬度
                 const isMobile = window.innerWidth < 768;
-                const cols = isMobile ? 2 : 4; // 手機2欄，電腦4欄
-                const count = Math.min(allPhotos.length, isMobile ? 4 : 8); // 手機一次秀4張，電腦8張
+                const cols = isMobile ? 2 : 4; 
+                const count = Math.min(allPhotos.length, isMobile ? 4 : 8); 
                 const cardBaseSize = isMobile ? 140 : 280;
                 const sizeVar = isMobile ? 40 : 80;
 
@@ -530,22 +548,18 @@
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
                     card.className = `wall-card`; 
-                    
                     const size = Math.random() * sizeVar + cardBaseSize; 
                     const col = index % cols;
                     const row = Math.floor(index / cols);
                     
-                    // 響應式分佈
                     const colWidth = 100 / cols;
-                    const rowHeight = isMobile ? 40 : 40; // row 高度百分比
+                    const rowHeight = isMobile ? 40 : 40; 
                     const left = col * colWidth + (Math.random() * 5); 
                     const top = row * rowHeight + (Math.random() * 10 + 5);
-                    
                     const rotate = (Math.random() * 16 - 8);
                     const mx = (Math.random() * 60 - 30)+'px', my = (Math.random()*60-30)+'px';
                     
-                    card.style.width = `${size}px`; 
-                    card.style.left = `${left}%`; card.style.top = `${top}%`;
+                    card.style.width = `${size}px`; card.style.left = `${left}%`; card.style.top = `${top}%`;
                     card.style.setProperty('--r', `${rotate}deg`); card.style.setProperty('--mx', mx); card.style.setProperty('--my', my);
                     card.style.zIndex = index;
                     
@@ -556,11 +570,9 @@
             }
         }
 
-        // --- 管理後台 ---
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
-            
             window.startDraw = async () => {
                 const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
                 const photos = snapshot.docs.map(d => d.data());
@@ -571,13 +583,11 @@
                     status: 'drawing', winners: winners, timestamp: Date.now()
                 });
             };
-
             window.resetDraw = async () => {
                 await setDoc(doc(db, 'artifacts', weddingId, 'public', 'data', 'game', 'draw'), {
                     status: 'idle', timestamp: Date.now()
                 });
             };
-
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
                 const gal = document.getElementById('admin-gallery'); gal.innerHTML = '';
                 countLabel.innerText = `目前共有 ${s.size} 張照片`;
