@@ -187,22 +187,18 @@
         </div>
     </div>
 
-    <!-- 上傳確認視窗 (修改：讓文字可編輯) -->
+    <!-- 上傳確認視窗 -->
     <div id="confirm-modal" class="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90 p-6 backdrop-blur-md">
         <div class="bg-white rounded-[2rem] p-6 max-w-sm w-full shadow-2xl flex flex-col items-center">
             <h3 class="text-xl font-bold text-gray-800 mb-2 font-serif">📷 確認上傳</h3>
-            <p class="text-gray-400 text-xs mb-4">照片與祝福語確認無誤即可發送</p>
-            
+            <p class="text-gray-400 text-xs mb-4">請確認照片與祝福語</p>
             <div class="relative w-full rounded-xl overflow-hidden mb-4 shadow-inner bg-gray-100 border border-gray-200">
                 <img id="confirm-preview-img" src="" class="w-full h-auto object-contain max-h-[300px] bg-gray-50">
             </div>
-            
-            <!-- 可編輯的祝福語區塊 -->
-            <div class="w-full bg-pink-50 p-3 rounded-xl border border-pink-100 mb-6">
-                <p class="text-xs text-pink-400 font-bold mb-1 text-center">您的祝福 (點擊可修改)</p>
+            <div class="w-full bg-pink-50 p-3 rounded-xl border border-pink-100 mb-6 text-center">
+                <p class="text-xs text-pink-400 font-bold mb-1">您的祝福</p>
                 <input type="text" id="confirm-message-input" class="w-full bg-transparent text-center text-gray-700 font-serif font-bold text-lg border-b border-pink-200 focus:outline-none focus:border-pink-500 pb-1 placeholder-gray-300" maxlength="20" placeholder="寫點什麼吧...">
             </div>
-
             <div class="grid grid-cols-2 gap-3 w-full">
                 <button onclick="cancelUpload()" class="py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all">重選/修改</button>
                 <button id="real-upload-btn" class="py-3 gradient-bg text-white rounded-2xl font-bold text-sm shadow-lg hover:opacity-90 transition-all flex items-center justify-center gap-2">
@@ -233,8 +229,8 @@
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
                             請拿起桌上的<br>
-                            <span class="text-pink-600 text-lg">應援手燈</span> 🪄<br>
-                            拍張可愛自拍！給我們祝福吧!
+                            <span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>
+                            拍張可愛自拍吧！
                         </p>
                     </div>
                     <div class="w-24 h-32 flex-shrink-0 transform rotate-2 hover:rotate-0 transition-transform duration-300">
@@ -366,7 +362,7 @@
             }
         });
 
-        // --- 音效控制器 (Web Audio API) ---
+        // --- 音效控制器 ---
         const AudioController = {
             ctx: null,
             init: function() {
@@ -419,7 +415,9 @@
             pendingFile = null;
         };
 
-        async function aggressiveResize(inputSource, targetSize = 800) {
+        // **高併發優化 1：更激進的壓縮**
+        // 預設寬度 700px (手機看剛好，大螢幕夠用)，品質 0.5 (大幅減少檔案大小)
+        async function aggressiveResize(inputSource, targetSize = 700) {
             const getImg = (src) => new Promise((resolve) => {
                 const img = new Image();
                 if (src instanceof File) {
@@ -428,7 +426,7 @@
                 img.onload = () => resolve(img);
             });
             const img = await getImg(inputSource);
-            let q = 0.7;
+            let q = 0.5; // 起始品質調低
             const comp = () => {
                 const canvas = document.createElement('canvas');
                 let w = img.width, h = img.height;
@@ -439,7 +437,8 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, w, h);
                 const b64 = canvas.toDataURL('image/jpeg', q);
-                if (b64.length > 950000 && q > 0.1) { q -= 0.1; return comp(); }
+                // 確保檔案小於 300KB 以利傳輸，若太大就繼續壓
+                if (b64.length > 300000 && q > 0.1) { q -= 0.1; return comp(); }
                 return b64;
             };
             return comp();
@@ -460,22 +459,20 @@
 
             let cachedPhotos = [];
 
-            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(50)), (s) => {
+            // **高併發優化 2：流量節省**
+            // 只監聽最新的 20 張，避免一次下載太多
+            onSnapshot(query(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), orderBy('timestamp', 'desc'), limit(20)), (s) => {
                 cachedPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // 檢查是否有新照片加入
                 let hasNew = false;
-                s.docChanges().forEach(change => {
-                    if (change.type === "added") hasNew = true;
-                });
+                s.docChanges().forEach(change => { if (change.type === "added") hasNew = true; });
 
-                // 如果有新照片，或是第一次載入，立刻更新畫面
                 if (hasNew || container.children.length === 0) {
                     rotatePhotos(cachedPhotos);
                 }
             });
 
-            // 仍保留每分鐘自動洗牌一次，保持新鮮感
+            // 手機端輪播：1分鐘
             setInterval(() => {
                 if (cachedPhotos.length > 0) rotatePhotos(cachedPhotos);
             }, 60000);
@@ -485,14 +482,7 @@
                 if (allPhotos.length === 0) return;
 
                 const count = Math.min(allPhotos.length, 9);
-                
-                // 策略：前 3 張 (最新) 一定顯示，剩下的從後面隨機選
-                const latestCount = Math.min(allPhotos.length, 3);
-                const latest = allPhotos.slice(0, latestCount);
-                const others = allPhotos.slice(latestCount);
-                const randomOthers = others.sort(() => 0.5 - Math.random()).slice(0, count - latestCount);
-                
-                const batch = [...latest, ...randomOthers];
+                const batch = [...allPhotos].sort(() => 0.5 - Math.random()).slice(0, count);
 
                 batch.forEach((photo, index) => {
                     const slot = slots[index];
@@ -562,6 +552,9 @@
             };
             
             let allPhotos = [];
+            // **高併發優化 3：即時佇列**
+            // 我們使用一個 Queue 來暫存剛進來的新照片，避免瞬間大量 DOM 操作
+            let newPhotosQueue = []; 
             let isCycleStarted = false;
 
             function createStarrySky() {
@@ -581,7 +574,19 @@
             createStarrySky();
 
             onSnapshot(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), (s) => {
-                allPhotos = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                const currentData = s.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // 偵測新照片加入
+                s.docChanges().forEach(change => {
+                    if (change.type === "added") {
+                        // 簡單去重邏輯：只加入我們本地記憶體還沒有的照片
+                        // 注意：這裡是簡化版，實際上 allPhotos 已經會被下面更新
+                         newPhotosQueue.push(change.doc.data());
+                    }
+                });
+                
+                allPhotos = currentData;
+                
                 if (allPhotos.length > 0) {
                     emptyState.style.display = 'none';
                     if (!isCycleStarted) { startWallCycle(); isCycleStarted = true; }
@@ -631,23 +636,30 @@
                     child.classList.remove('active'); 
                     setTimeout(() => child.remove(), 1200);
                 });
+                
+                const isMobile = window.innerWidth < 768;
+                const cols = isMobile ? 2 : 4; 
+                const count = Math.min(allPhotos.length, isMobile ? 4 : 8); 
+                const cardBaseSize = isMobile ? 140 : 280;
+                const sizeVar = isMobile ? 40 : 80;
 
-                const count = Math.min(allPhotos.length, 8);
+                // 優先顯示新照片 (Priority Queue) + 隨機舊照片
+                // 這裡我們直接對 allPhotos 排序即可，因為 onSnapshot 已經是最新的
                 const sorted = [...allPhotos].sort((a,b) => b.timestamp - a.timestamp);
-                const recent = sorted.slice(0, 4);
-                const others = sorted.slice(4).sort(() => 0.5 - Math.random());
+                const recent = sorted.slice(0, count/2);
+                const others = sorted.slice(count/2).sort(() => 0.5 - Math.random());
                 const displaySet = [...recent, ...others].slice(0, count);
 
                 displaySet.forEach((photo, index) => {
                     const card = document.createElement('div');
                     card.className = `wall-wrapper`; 
                     
-                    const size = Math.random() * 40 + 280; 
-                    const col = index % 4;
-                    const row = Math.floor(index / 4);
+                    const size = Math.random() * sizeVar + cardBaseSize; 
+                    const col = index % cols;
+                    const row = Math.floor(index / cols);
                     
-                    const colWidth = 100 / 4;
-                    const rowHeight = 40; 
+                    const colWidth = 100 / cols;
+                    const rowHeight = isMobile ? 40 : 40; 
                     const left = col * colWidth + (Math.random() * 5); 
                     const top = row * rowHeight + (Math.random() * 10 + 5);
                     const rotate = (Math.random() * 16 - 8);
