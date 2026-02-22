@@ -179,14 +179,13 @@
         
         .app-logo { animation: mobile-float 6s ease-in-out infinite; }
         
-        /* 音效開關按鈕 */
-        #audio-toggle {
-            position: absolute; bottom: 20px; right: 20px; z-index: 60;
-            background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4);
-            color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer;
-            backdrop-filter: blur(5px); transition: all 0.3s;
+        /* 替換：移除 #audio-toggle，改用開場解鎖遮罩 */
+        #audio-unlock-overlay {
+            position: fixed; inset: 0; z-index: 300;
+            background: rgba(0,0,0,0.9); backdrop-filter: blur(10px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: white; cursor: pointer; transition: opacity 0.8s ease;
         }
-        #audio-toggle:hover { background: rgba(255,255,255,0.4); }
     </style>
 </head>
 <body class="min-h-screen">
@@ -291,8 +290,11 @@
     <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
         <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
 
-        <!-- 音效開關 -->
-        <button id="audio-toggle">🔊 開啟音效</button>
+        <!-- 新增：音效解鎖全螢幕遮罩 (取代原本右下角的小按鈕) -->
+        <div id="audio-unlock-overlay">
+            <p class="text-4xl md:text-6xl font-serif mb-6 animate-pulse tracking-widest text-pink-200">點擊螢幕開始</p>
+            <p class="text-gray-400 tracking-[0.3em] text-sm md:text-base uppercase">Click anywhere to start & unlock audio</p>
+        </div>
 
         <!-- Dashboard Logo -->
         <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-0 text-white opacity-70 font-serif pointer-events-none flex flex-col items-center gap-2">
@@ -605,12 +607,13 @@
             const congratsPopup = document.getElementById('congrats-popup');
             const winnerCards = document.querySelectorAll('.winner-card');
             
-            const audioBtn = document.getElementById('audio-toggle');
-            audioBtn.onclick = () => {
+            // 音效解鎖邏輯 (更新為點擊全螢幕遮罩解鎖)
+            const unlockOverlay = document.getElementById('audio-unlock-overlay');
+            unlockOverlay.onclick = () => {
                 AudioController.init();
-                AudioController.playTick();
-                audioBtn.innerText = "🔊 音效已開啟";
-                setTimeout(() => audioBtn.style.opacity = '0.3', 2000);
+                AudioController.playTick(); // 播放極短音效喚醒瀏覽器
+                unlockOverlay.style.opacity = '0'; // 淡出
+                setTimeout(() => unlockOverlay.style.display = 'none', 800); // 移除節點
             };
             
             let allPhotos = [];
