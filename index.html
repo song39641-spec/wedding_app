@@ -211,7 +211,12 @@
             <h3 class="text-xl font-bold text-gray-800 mb-2 font-serif">📷 確認上傳</h3>
             <p class="text-gray-400 text-xs mb-4">請確認照片與祝福語</p>
             <div class="relative w-full rounded-xl overflow-hidden mb-4 shadow-inner bg-gray-100 border border-gray-200">
-                <img id="confirm-preview-img" src="" class="w-full h-auto object-contain max-h-[300px] bg-gray-50">
+                <img id="confirm-preview-img" src="" class="w-full h-auto object-contain max-h-[300px] bg-gray-50 transition-transform duration-300">
+                <!-- 新增：左右翻轉按鈕 -->
+                <button type="button" id="flip-image-btn" class="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow-md text-gray-700 hover:bg-gray-200 z-10 flex items-center gap-1 text-xs font-bold">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    左右翻轉
+                </button>
             </div>
             <div class="w-full bg-pink-50 p-3 rounded-xl border border-pink-100 mb-6 text-center">
                 <p class="text-xs text-pink-400 font-bold mb-1">您的祝福 (點擊可修改)</p>
@@ -247,7 +252,7 @@
                         <span class="inline-block bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mb-2 shadow-sm animate-pulse">📸 任務 MISSION</span>
                         <p class="text-gray-700 text-sm font-bold leading-relaxed">
                             請拿起桌上的<br>
-                            <span class="text-pink-600 text-lg">愛心加油棒</span> 🪄<br>
+                            <span class="text-pink-600 text-lg">應援手燈</span> 🪄<br>
                             拍張可愛自拍吧！
                         </p>
                     </div>
@@ -454,9 +459,12 @@
             document.getElementById('confirm-modal').style.display = 'none';
             document.getElementById('photo-input').value = ''; 
             pendingFile = null;
+            isImageFlipped = false;
+            document.getElementById('confirm-preview-img').style.transform = 'scaleX(1)';
         };
 
-        async function aggressiveResize(inputSource, targetSize = 700) {
+        // 修改壓縮函數，加入 flipH (水平翻轉) 參數
+        async function aggressiveResize(inputSource, targetSize = 700, flipH = false) {
             const getImg = (src) => new Promise((resolve) => {
                 const img = new Image();
                 if (src instanceof File) {
@@ -474,6 +482,13 @@
                 }
                 canvas.width = w; canvas.height = h;
                 const ctx = canvas.getContext('2d');
+                
+                // 如果需要翻轉，調整 Canvas 繪圖矩陣
+                if (flipH) {
+                    ctx.translate(w, 0);
+                    ctx.scale(-1, 1);
+                }
+                
                 ctx.drawImage(img, 0, 0, w, h);
                 const b64 = canvas.toDataURL('image/jpeg', q);
                 if (b64.length > 300000 && q > 0.1) { q -= 0.1; return comp(); }
@@ -483,6 +498,7 @@
         }
 
         let pendingFile = null;
+        let isImageFlipped = false; // 新增：追蹤翻轉狀態
 
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
@@ -536,6 +552,11 @@
             const verifySelection = (file) => {
                 if (!file) return;
                 pendingFile = file; 
+                
+                // 重置翻轉狀態
+                isImageFlipped = false;
+                document.getElementById('confirm-preview-img').style.transform = 'scaleX(1)';
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     document.getElementById('confirm-preview-img').src = e.target.result;
@@ -546,6 +567,12 @@
                 reader.readAsDataURL(file);
             };
 
+            // 新增：翻轉按鈕事件
+            document.getElementById('flip-image-btn').onclick = () => {
+                isImageFlipped = !isImageFlipped;
+                document.getElementById('confirm-preview-img').style.transform = isImageFlipped ? 'scaleX(-1)' : 'scaleX(1)';
+            };
+
             const executeUpload = async () => {
                 if (!pendingFile) return;
                 document.getElementById('confirm-modal').style.display = 'none';
@@ -554,7 +581,8 @@
                 
                 status.innerText = "照片處理上傳中...";
                 try {
-                    let b64 = await aggressiveResize(pendingFile); 
+                    // 將翻轉狀態傳入處理程序
+                    let b64 = await aggressiveResize(pendingFile, 700, isImageFlipped); 
                     await addDoc(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'), {
                         imageUrl: b64, message: message, timestamp: Date.now()
                     });
