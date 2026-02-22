@@ -588,6 +588,10 @@
             let allPhotos = [];
             let newPhotosQueue = []; 
             let isCycleStarted = false;
+            
+            // 新增：防重複觸發與計時器管理
+            let currentDrawTimestamp = 0; 
+            let congratsTimeout1, congratsTimeout2;
 
             function createStarrySky() {
                 const bg = document.getElementById('dashboard-stars');
@@ -620,9 +624,18 @@
                 const data = docSnap.data();
                 
                 if (data.status === 'drawing') {
+                    // 防重複觸發：如果 timestamp 沒變，代表是同一次抽獎事件，直接略過
+                    if (currentDrawTimestamp === data.timestamp) return; 
+                    currentDrawTimestamp = data.timestamp;
+
                     drawOverlay.style.display = 'flex';
                     drawOverlay.classList.add('shuffling'); 
-                    congratsPopup.classList.remove('show'); // 重置恭喜圖片
+                    
+                    // 重置恭喜圖片與計時器
+                    clearTimeout(congratsTimeout1);
+                    clearTimeout(congratsTimeout2);
+                    congratsPopup.classList.remove('show'); 
+                    
                     winnerCards.forEach(card => card.classList.remove('reveal'));
                     
                     let shuffleInterval = setInterval(() => {
@@ -644,23 +657,23 @@
                                 card.querySelector('img').src = w.imageUrl;
                                 card.querySelector('.winner-msg').innerText = w.message || "Lucky Winner!";
                                 
-                                // 加快翻牌節奏，每 0.6 秒翻一個
                                 setTimeout(() => {
                                     card.classList.add('reveal');
                                     AudioController.playWin();
                                     
-                                    // 當最後一位幸運兒揭曉時
-                                    if(i === 5) { 
+                                    // 當最後一位幸運兒揭曉時 (動態判斷最後一張)
+                                    if(i === data.winners.length - 1) { 
                                         confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 } });
+                                        
                                         // 延遲 1.5 秒後，彈出恭喜專屬圖片
-                                        setTimeout(() => {
+                                        congratsTimeout1 = setTimeout(() => {
                                             congratsPopup.classList.add('show');
                                             AudioController.playWin(); // 再播放一次大獎音效
                                             
-                                            // 顯示 3 秒後自動隱藏，讓大家看清楚中獎者照片
-                                            setTimeout(() => {
+                                            // 強制確保 3.5 秒後自動隱藏，讓大家看清楚中獎者照片
+                                            congratsTimeout2 = setTimeout(() => {
                                                 congratsPopup.classList.remove('show');
-                                            }, 3000);
+                                            }, 3500);
                                         }, 1500); 
                                     }
                                 }, i * 600);
@@ -668,7 +681,12 @@
                         }
                     }, 5000);
                 } else if (data.status === 'idle') {
+                    if (currentDrawTimestamp === 0) return; // 已經是閒置狀態就略過
+                    currentDrawTimestamp = 0; // 重置狀態
+                    
                     drawOverlay.style.display = 'none';
+                    clearTimeout(congratsTimeout1);
+                    clearTimeout(congratsTimeout2);
                     congratsPopup.classList.remove('show');
                     winnerCards.forEach(card => card.classList.remove('reveal'));
                 }
