@@ -656,6 +656,11 @@
                                         setTimeout(() => {
                                             congratsPopup.classList.add('show');
                                             AudioController.playWin(); // 再播放一次大獎音效
+                                            
+                                            // 顯示 3 秒後自動隱藏，讓大家看清楚中獎者照片
+                                            setTimeout(() => {
+                                                congratsPopup.classList.remove('show');
+                                            }, 3000);
                                         }, 1500); 
                                     }
                                 }, i * 600);
