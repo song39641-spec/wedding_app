@@ -410,13 +410,29 @@
             }
         });
 
-        // --- 音效控制器 ---
+        // --- 音效控制器 (雙引擎：合成音效 + 自訂音樂) ---
         const AudioController = {
             ctx: null,
+            drawMusic: new Audio('draw.mp3'), // 自訂抽獎背景音樂
+            winMusic: new Audio('win.mp3'),   // 自訂中獎歡呼音樂
             init: function() {
+                // 1. 初始化合成音效引擎 (拉霸與叮咚聲)
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
+
+                // 2. 預載入自訂音樂並解除瀏覽器限制
+                this.drawMusic.load();
+                this.winMusic.load();
+                this.drawMusic.volume = 0.6; // 背景音樂稍微調小，以免蓋過合成音效
+                this.winMusic.volume = 1.0;
+
+                this.drawMusic.muted = true;
+                this.drawMusic.play().then(() => {
+                    this.drawMusic.pause();
+                    this.drawMusic.muted = false;
+                }).catch(e => console.log("自訂音樂解鎖等待中"));
             },
+            // --- 程式合成音效 ---
             playTick: function() {
                 if (!this.ctx) return;
                 const osc = this.ctx.createOscillator();
@@ -447,6 +463,19 @@
                     osc.start(now + i*0.1);
                     osc.stop(now + i*0.1 + 1.5);
                 });
+            },
+            // --- 自訂 MP3 音樂控制 ---
+            startDrawMusic: function() {
+                this.drawMusic.currentTime = 0;
+                this.drawMusic.loop = true;
+                this.drawMusic.play().catch(e => console.log("找不到 draw.mp3 檔案"));
+            },
+            stopDrawMusic: function() {
+                this.drawMusic.pause();
+            },
+            playWinMusic: function() {
+                this.winMusic.currentTime = 0;
+                this.winMusic.play().catch(e => console.log("找不到 win.mp3 檔案"));
             }
         };
 
@@ -607,13 +636,12 @@
             const congratsPopup = document.getElementById('congrats-popup');
             const winnerCards = document.querySelectorAll('.winner-card');
             
-            // 音效解鎖邏輯 (更新為點擊全螢幕遮罩解鎖)
+            // 音效解鎖邏輯 (點擊全螢幕遮罩解鎖)
             const unlockOverlay = document.getElementById('audio-unlock-overlay');
             unlockOverlay.onclick = () => {
                 AudioController.init();
-                AudioController.playTick(); // 播放極短音效喚醒瀏覽器
-                unlockOverlay.style.opacity = '0'; // 淡出
-                setTimeout(() => unlockOverlay.style.display = 'none', 800); // 移除節點
+                unlockOverlay.style.opacity = '0'; // 淡出遮罩
+                setTimeout(() => unlockOverlay.style.display = 'none', 800); 
             };
             
             let allPhotos = [];
@@ -669,7 +697,11 @@
                     
                     winnerCards.forEach(card => card.classList.remove('reveal'));
                     
+                    // 1. 開始播放自訂背景音樂
+                    AudioController.startDrawMusic();
+                    
                     let shuffleInterval = setInterval(() => {
+                        // 保留合成的拉霸滴答聲
                         AudioController.playTick();
                         winnerCards.forEach(card => {
                             const randomPhoto = allPhotos[Math.floor(Math.random() * allPhotos.length)];
@@ -681,6 +713,9 @@
                         clearInterval(shuffleInterval);
                         drawOverlay.classList.remove('shuffling');
                         
+                        // 2. 停止自訂背景音樂
+                        AudioController.stopDrawMusic();
+                        
                         if (data.winners && data.winners.length === 6) {
                             data.winners.forEach((w, i) => {
                                 const card = document.getElementById(`winner-${i+1}`);
@@ -690,6 +725,7 @@
                                 
                                 setTimeout(() => {
                                     card.classList.add('reveal');
+                                    // 保留每張牌翻開時的叮咚聲
                                     AudioController.playWin();
                                     
                                     // 當最後一位幸運兒揭曉時 (動態判斷最後一張)
@@ -699,7 +735,10 @@
                                         // 延遲 1.5 秒後，彈出恭喜專屬圖片
                                         congratsTimeout1 = setTimeout(() => {
                                             congratsPopup.classList.add('show');
-                                            AudioController.playWin(); // 再播放一次大獎音效
+                                            AudioController.playWin(); // 再播放一次大獎合成音效
+                                            
+                                            // 3. 播放自訂的「恭喜中獎」專屬音樂
+                                            AudioController.playWinMusic();
                                             
                                             // 強制確保 3.5 秒後自動隱藏，讓大家看清楚中獎者照片
                                             congratsTimeout2 = setTimeout(() => {
