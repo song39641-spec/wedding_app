@@ -120,7 +120,7 @@
         }
         @media (min-width: 768px) { #draw-title { font-size: 4rem; } }
 
-        /* 修改為 6 人網格排版 */
+        /* 6 人網格排版 */
         .winners-grid { 
             display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; 
             justify-content: center; align-items: center; width: 100%; max-width: 1000px; padding: 10px;
@@ -211,7 +211,7 @@
             <p class="text-gray-400 text-xs mb-4">請確認照片與祝福語</p>
             <div class="relative w-full rounded-xl overflow-hidden mb-4 shadow-inner bg-gray-100 border border-gray-200">
                 <img id="confirm-preview-img" src="" class="w-full h-auto object-contain max-h-[300px] bg-gray-50 transition-transform duration-300">
-                <!-- 新增：左右翻轉按鈕 -->
+                <!-- 左右翻轉按鈕 -->
                 <button type="button" id="flip-image-btn" class="absolute top-2 right-2 bg-white/90 p-2 rounded-full shadow-md text-gray-700 hover:bg-gray-200 z-10 flex items-center gap-1 text-xs font-bold">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
                     左右翻轉
@@ -290,7 +290,7 @@
     <div id="dashboard-view" class="hidden fixed inset-0 overflow-hidden" style="background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);">
         <div id="dashboard-stars" class="absolute inset-0 z-0 pointer-events-none"></div>
 
-        <!-- 新增：音效解鎖全螢幕遮罩 (取代原本右下角的小按鈕) -->
+        <!-- 音效解鎖全螢幕遮罩 -->
         <div id="audio-unlock-overlay">
             <p class="text-4xl md:text-6xl font-serif mb-6 animate-pulse tracking-widest text-pink-200">點擊螢幕開始</p>
             <p class="text-gray-400 tracking-[0.3em] text-sm md:text-base uppercase">Click anywhere to start & unlock audio</p>
@@ -314,7 +314,7 @@
         <!-- 抽獎層 -->
         <div id="draw-overlay">
             <h1 id="draw-title">LUCKY DRAW</h1>
-            <!-- 改為 6 個卡片欄位 -->
+            <!-- 6 個卡片欄位 -->
             <div class="winners-grid">
                 <div class="winner-card" id="winner-1">
                     <div class="winner-rank">Winner 1</div>
@@ -410,21 +410,18 @@
             }
         });
 
-        // --- 音效控制器 (雙引擎：合成音效 + 自訂音樂) ---
+        // --- 音效控制器 (雙引擎：合成音效 + 唯一背景音樂) ---
         const AudioController = {
             ctx: null,
-            drawMusic: new Audio('draw.mp3'), // 自訂抽獎背景音樂
-            winMusic: new Audio('win.mp3'),   // 自訂中獎歡呼音樂
+            drawMusic: new Audio('draw.mp3'), // 唯一的自訂背景音樂
             init: function() {
                 // 1. 初始化合成音效引擎 (拉霸與叮咚聲)
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.ctx = new AudioContext();
 
-                // 2. 預載入自訂音樂並解除瀏覽器限制
+                // 2. 預載入音樂並解除瀏覽器限制
                 this.drawMusic.load();
-                this.winMusic.load();
-                this.drawMusic.volume = 0.6; // 背景音樂稍微調小，以免蓋過合成音效
-                this.winMusic.volume = 1.0;
+                this.drawMusic.volume = 0.8; // 設定音量
 
                 this.drawMusic.muted = true;
                 this.drawMusic.play().then(() => {
@@ -432,7 +429,7 @@
                     this.drawMusic.muted = false;
                 }).catch(e => console.log("自訂音樂解鎖等待中"));
             },
-            // --- 程式合成音效 ---
+            // --- 程式合成特效音 ---
             playTick: function() {
                 if (!this.ctx) return;
                 const osc = this.ctx.createOscillator();
@@ -467,15 +464,12 @@
             // --- 自訂 MP3 音樂控制 ---
             startDrawMusic: function() {
                 this.drawMusic.currentTime = 0;
-                this.drawMusic.loop = true;
+                // 設定 loop 為 false，讓它播到完就自然停止
+                this.drawMusic.loop = false;
                 this.drawMusic.play().catch(e => console.log("找不到 draw.mp3 檔案"));
             },
             stopDrawMusic: function() {
                 this.drawMusic.pause();
-            },
-            playWinMusic: function() {
-                this.winMusic.currentTime = 0;
-                this.winMusic.play().catch(e => console.log("找不到 win.mp3 檔案"));
             }
         };
 
@@ -494,7 +488,7 @@
             document.getElementById('confirm-preview-img').style.transform = 'scaleX(1)';
         };
 
-        // 修改壓縮函數，加入 flipH (水平翻轉) 參數
+        // 壓縮函數 (含水平翻轉)
         async function aggressiveResize(inputSource, targetSize = 700, flipH = false) {
             const getImg = (src) => new Promise((resolve) => {
                 const img = new Image();
@@ -529,7 +523,7 @@
         }
 
         let pendingFile = null;
-        let isImageFlipped = false; // 新增：追蹤翻轉狀態
+        let isImageFlipped = false; // 追蹤翻轉狀態
 
         function showGuest() {
             document.getElementById('guest-view').classList.remove('hidden');
@@ -598,7 +592,7 @@
                 reader.readAsDataURL(file);
             };
 
-            // 新增：翻轉按鈕事件
+            // 翻轉按鈕事件
             document.getElementById('flip-image-btn').onclick = () => {
                 isImageFlipped = !isImageFlipped;
                 document.getElementById('confirm-preview-img').style.transform = isImageFlipped ? 'scaleX(-1)' : 'scaleX(1)';
@@ -640,6 +634,7 @@
             const unlockOverlay = document.getElementById('audio-unlock-overlay');
             unlockOverlay.onclick = () => {
                 AudioController.init();
+                AudioController.playTick(); // 播放極短音效喚醒瀏覽器
                 unlockOverlay.style.opacity = '0'; // 淡出遮罩
                 setTimeout(() => unlockOverlay.style.display = 'none', 800); 
             };
@@ -648,7 +643,6 @@
             let newPhotosQueue = []; 
             let isCycleStarted = false;
             
-            // 新增：防重複觸發與計時器管理
             let currentDrawTimestamp = 0; 
             let congratsTimeout1, congratsTimeout2;
 
@@ -683,7 +677,7 @@
                 const data = docSnap.data();
                 
                 if (data.status === 'drawing') {
-                    // 防重複觸發：如果 timestamp 沒變，代表是同一次抽獎事件，直接略過
+                    // 防重複觸發
                     if (currentDrawTimestamp === data.timestamp) return; 
                     currentDrawTimestamp = data.timestamp;
 
@@ -697,11 +691,11 @@
                     
                     winnerCards.forEach(card => card.classList.remove('reveal'));
                     
-                    // 1. 開始播放自訂背景音樂
+                    // 1. 開始播放自訂背景音樂 (會一路播下去不中斷)
                     AudioController.startDrawMusic();
                     
                     let shuffleInterval = setInterval(() => {
-                        // 保留合成的拉霸滴答聲
+                        // 合成的拉霸滴答聲
                         AudioController.playTick();
                         winnerCards.forEach(card => {
                             const randomPhoto = allPhotos[Math.floor(Math.random() * allPhotos.length)];
@@ -713,8 +707,7 @@
                         clearInterval(shuffleInterval);
                         drawOverlay.classList.remove('shuffling');
                         
-                        // 2. 停止自訂背景音樂
-                        AudioController.stopDrawMusic();
+                        // 移除這裡的 stopDrawMusic()，讓音樂繼續放
                         
                         if (data.winners && data.winners.length === 6) {
                             data.winners.forEach((w, i) => {
@@ -725,10 +718,10 @@
                                 
                                 setTimeout(() => {
                                     card.classList.add('reveal');
-                                    // 保留每張牌翻開時的叮咚聲
+                                    // 每張牌翻開時的合成特效音
                                     AudioController.playWin();
                                     
-                                    // 當最後一位幸運兒揭曉時 (動態判斷最後一張)
+                                    // 當最後一位幸運兒揭曉時
                                     if(i === data.winners.length - 1) { 
                                         confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 } });
                                         
@@ -737,10 +730,7 @@
                                             congratsPopup.classList.add('show');
                                             AudioController.playWin(); // 再播放一次大獎合成音效
                                             
-                                            // 3. 播放自訂的「恭喜中獎」專屬音樂
-                                            AudioController.playWinMusic();
-                                            
-                                            // 強制確保 3.5 秒後自動隱藏，讓大家看清楚中獎者照片
+                                            // 強制確保 3.5 秒後自動隱藏
                                             congratsTimeout2 = setTimeout(() => {
                                                 congratsPopup.classList.remove('show');
                                             }, 3500);
@@ -751,9 +741,12 @@
                         }
                     }, 5000);
                 } else if (data.status === 'idle') {
-                    if (currentDrawTimestamp === 0) return; // 已經是閒置狀態就略過
-                    currentDrawTimestamp = 0; // 重置狀態
+                    if (currentDrawTimestamp === 0) return; 
+                    currentDrawTimestamp = 0; 
                     
+                    // 只有在後台按下「清除抽獎」時，才會停止自訂音樂
+                    AudioController.stopDrawMusic();
+
                     drawOverlay.style.display = 'none';
                     clearTimeout(congratsTimeout1);
                     clearTimeout(congratsTimeout2);
@@ -820,13 +813,11 @@
                 const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
                 const photos = snapshot.docs.map(d => d.data());
                 
-                // 防呆：確認是否滿 6 張
                 if (photos.length < 6) { 
                     alert(`目前只有 ${photos.length} 張照片，不足 6 張，無法抽獎！`); 
                     return; 
                 }
                 
-                // 隨機選出 6 張
                 const shuffled = photos.sort(() => 0.5 - Math.random());
                 const winners = shuffled.slice(0, 6);
                 
