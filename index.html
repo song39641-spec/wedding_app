@@ -6,6 +6,8 @@
     <title>Wedding Moments - 婚禮相片分享</title>
     <!-- 引入彩帶特效庫 -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- 引入 JSZip 庫來打包下載檔案 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap');
@@ -217,9 +219,10 @@
                     左右翻轉
                 </button>
             </div>
-            <div class="w-full bg-pink-50 p-3 rounded-xl border border-pink-100 mb-6 text-center">
+            <div class="w-full bg-pink-50 p-3 rounded-xl border border-pink-100 mb-6 text-center relative">
                 <p class="text-xs text-pink-400 font-bold mb-1">您的祝福 (點擊可修改)</p>
-                <input type="text" id="confirm-message-input" class="w-full bg-transparent text-center text-gray-700 font-serif font-bold text-lg border-b border-pink-200 focus:outline-none focus:border-pink-500 pb-1 placeholder-gray-300" maxlength="20" placeholder="寫點什麼吧...">
+                <input type="text" id="confirm-message-input" class="w-full bg-transparent text-center text-gray-700 font-serif font-bold text-lg border-b border-pink-200 focus:outline-none focus:border-pink-500 pb-1 placeholder-gray-300 pr-8" maxlength="20" placeholder="寫點什麼吧..." oninput="document.getElementById('confirm-char-count').innerText = this.value.length + '/20'">
+                <span id="confirm-char-count" class="absolute bottom-3 right-3 text-[10px] text-pink-400 font-bold"></span>
             </div>
             <div class="grid grid-cols-2 gap-3 w-full">
                 <button onclick="cancelUpload()" class="py-3 bg-gray-100 text-gray-600 rounded-2xl font-bold text-sm hover:bg-gray-200 transition-all">重選/修改</button>
@@ -262,8 +265,11 @@
             </div>
 
             <div class="mb-6">
-                <label class="block text-gray-400 text-xs font-bold mb-2 ml-1">留下一句祝福 (選填)</label>
-                <textarea id="guest-message" rows="2" maxlength="20" placeholder="例如：新婚快樂！百年好合 ❤️" class="message-input w-full px-4 py-3 rounded-xl resize-none text-base shadow-sm"></textarea>
+                <div class="flex justify-between items-end mb-2 ml-1 pr-1">
+                    <label class="block text-gray-400 text-xs font-bold">留下一句祝福 (選填)</label>
+                    <span id="char-count" class="text-[10px] text-pink-400 font-bold">0/20 字</span>
+                </div>
+                <textarea id="guest-message" rows="2" maxlength="20" placeholder="例如：新婚快樂！百年好合 ❤️" class="message-input w-full px-4 py-3 rounded-xl resize-none text-base shadow-sm" oninput="document.getElementById('char-count').innerText = this.value.length + '/20 字'"></textarea>
             </div>
 
             <div class="relative h-16 rounded-full gradient-bg shadow-lg flex items-center justify-center overflow-hidden active:scale-95 transition-transform cursor-pointer group">
@@ -364,6 +370,10 @@
                 <p id="photo-count" class="text-gray-500 text-sm">統計中...</p>
             </div>
             <div class="flex flex-wrap gap-2 justify-center">
+                <!-- 新增：匯出備份按鈕 -->
+                <button id="export-btn" onclick="window.exportData()" class="bg-green-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:bg-green-600 transform active:scale-95 transition-all">
+                    📦 匯出備份
+                </button>
                 <!-- 更新按鈕文字為 6 位 -->
                 <button onclick="window.startDraw()" class="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-2 px-6 rounded-full shadow-lg hover:opacity-90 transform active:scale-95 transition-all">
                     🎰 抽出 6 位幸運兒
@@ -587,6 +597,7 @@
                     document.getElementById('confirm-preview-img').src = e.target.result;
                     const msg = msgInput.value.trim() || "Happy Wedding! ❤️";
                     document.getElementById('confirm-message-input').value = msg; 
+                    document.getElementById('confirm-char-count').innerText = msg.length + '/20'; // 更新確認視窗的字數
                     document.getElementById('confirm-modal').style.display = 'flex';
                 };
                 reader.readAsDataURL(file);
@@ -612,7 +623,10 @@
                         imageUrl: b64, message: message, timestamp: Date.now()
                     });
                     status.innerText = "上傳成功！感謝您的祝福";
-                    msgInput.value = ""; document.getElementById('photo-input').value = ''; pendingFile = null;
+                    msgInput.value = ""; 
+                    document.getElementById('char-count').innerText = "0/20 字"; // 上傳成功後歸零
+                    document.getElementById('photo-input').value = ''; 
+                    pendingFile = null;
                 } catch (e) { showMessage("上傳失敗", e.message); status.innerText = ""; } 
                 finally { setTimeout(() => status.innerText = "", 3000); }
             };
@@ -755,7 +769,8 @@
                 }
             });
 
-            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 60000); 
+            // 修改此處：將 60000 毫秒改為 15000 毫秒 (15秒換一輪)
+            setInterval(() => { if(allPhotos.length > 0) startWallCycle(); }, 15000); 
 
             function startWallCycle() {
                 Array.from(wall.children).forEach(child => {
@@ -808,6 +823,62 @@
         function showAdmin() {
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
+            
+            // 新增：匯出備份功能
+            window.exportData = async () => {
+                const btn = document.getElementById('export-btn');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = "⏳ 打包中...請稍候";
+                btn.disabled = true;
+
+                try {
+                    const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
+                    if (snapshot.empty) {
+                        alert("目前沒有照片可以匯出！");
+                        return;
+                    }
+
+                    const zip = new window.JSZip();
+                    const photoFolder = zip.folder("Wedding_Photos");
+                    // 加上 \uFEFF 讓 Excel 可以正確識別 UTF-8 中文
+                    let csvContent = "\uFEFF檔案名稱,祝福語,上傳時間\n"; 
+
+                    snapshot.docs.forEach((doc, index) => {
+                        const data = doc.data();
+                        const filename = `photo_${index + 1}.jpg`;
+                        const date = new Date(data.timestamp).toLocaleString('zh-TW');
+                        // 處理 CSV 格式中的換行與雙引號避免跑版
+                        const msg = (data.message || "無留言").replace(/"/g, '""').replace(/\n/g, " "); 
+
+                        csvContent += `"${filename}","${msg}","${date}"\n`;
+
+                        // 將 Base64 轉換放入 zip
+                        if (data.imageUrl && data.imageUrl.includes('base64,')) {
+                            const base64Data = data.imageUrl.split(',')[1];
+                            photoFolder.file(filename, base64Data, {base64: true});
+                        }
+                    });
+
+                    zip.file("祝福留言清單.csv", csvContent);
+
+                    // 產生壓縮檔並觸發下載
+                    const blob = await zip.generateAsync({type: "blob"});
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "Wedding_Moments_Backup.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                } catch (error) {
+                    alert("匯出失敗：" + error.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            };
             
             window.startDraw = async () => {
                 const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
