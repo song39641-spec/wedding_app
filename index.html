@@ -824,40 +824,84 @@
             document.getElementById('admin-view').classList.remove('hidden');
             const countLabel = document.getElementById('photo-count');
             
-            // 新增：匯出備份功能
+            // 新增：匯出備份按鈕 (加工成拍立得樣式)
             window.exportData = async () => {
                 const btn = document.getElementById('export-btn');
                 const originalText = btn.innerHTML;
-                btn.innerHTML = "⏳ 打包中...請稍候";
+                btn.innerHTML = "⏳ 製作拍立得打包中...";
                 btn.disabled = true;
 
                 try {
                     const snapshot = await getDocs(collection(db, 'artifacts', weddingId, 'public', 'data', 'photos'));
                     if (snapshot.empty) {
                         alert("目前沒有照片可以匯出！");
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
                         return;
                     }
 
                     const zip = new window.JSZip();
                     const photoFolder = zip.folder("Wedding_Photos");
-                    // 加上 \uFEFF 讓 Excel 可以正確識別 UTF-8 中文
                     let csvContent = "\uFEFF檔案名稱,祝福語,上傳時間\n"; 
 
-                    snapshot.docs.forEach((doc, index) => {
-                        const data = doc.data();
-                        const filename = `photo_${index + 1}.jpg`;
+                    // 準備畫布 (拍立得底片)
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = 800;
+                    canvas.height = 1000;
+
+                    // 等待字體載入，確保匯出的字體跟大螢幕一樣好看
+                    await document.fonts.ready;
+
+                    // 注意：這裡必須使用 for 迴圈來等待圖片載入
+                    for (let i = 0; i < snapshot.docs.length; i++) {
+                        const data = snapshot.docs[i].data();
+                        const filename = `photo_${i + 1}.jpg`;
                         const date = new Date(data.timestamp).toLocaleString('zh-TW');
-                        // 處理 CSV 格式中的換行與雙引號避免跑版
-                        const msg = (data.message || "無留言").replace(/"/g, '""').replace(/\n/g, " "); 
+                        const msgText = data.message || "Happy Wedding!";
+                        const msg = msgText.replace(/"/g, '""').replace(/\n/g, " "); 
 
                         csvContent += `"${filename}","${msg}","${date}"\n`;
 
-                        // 將 Base64 轉換放入 zip
                         if (data.imageUrl && data.imageUrl.includes('base64,')) {
-                            const base64Data = data.imageUrl.split(',')[1];
-                            photoFolder.file(filename, base64Data, {base64: true});
+                            const img = new Image();
+                            await new Promise((resolve) => {
+                                img.onload = resolve;
+                                img.src = data.imageUrl;
+                            });
+
+                            // 1. 畫白色背景 (拍立得底紙)
+                            ctx.fillStyle = "#ffffff";
+                            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                            // 2. 1:1 完美置中裁切計算
+                            const targetSize = 720;
+                            let sWidth = img.width, sHeight = img.height;
+                            let sx = 0, sy = 0;
+                            if (sWidth > sHeight) {
+                                sx = (sWidth - sHeight) / 2;
+                                sWidth = sHeight;
+                            } else {
+                                sy = (sHeight - sWidth) / 2;
+                                sHeight = sWidth;
+                            }
+                            
+                            // 3. 把照片印上去 (留白邊)
+                            ctx.drawImage(img, sx, sy, sWidth, sHeight, 40, 40, targetSize, targetSize);
+
+                            // 4. 在底部畫上留言文字
+                            ctx.fillStyle = "#444444";
+                            ctx.textAlign = "center";
+                            ctx.textBaseline = "middle";
+                            ctx.font = "bold 40px 'Caveat', 'Noto Serif TC', serif";
+                            // 最多寬度 720px，避免字太長跑出相紙
+                            ctx.fillText(msgText, canvas.width / 2, 880, 720);
+
+                            // 5. 將畫好的拍立得轉成 JPEG 放進壓縮檔
+                            const newBase64 = canvas.toDataURL("image/jpeg", 0.9).split(',')[1];
+                            photoFolder.file(filename, newBase64, {base64: true});
                         }
-                    });
+                    }
 
                     zip.file("祝福留言清單.csv", csvContent);
 
